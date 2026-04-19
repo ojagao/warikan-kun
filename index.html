@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0f1a" />
+<title>割り勘くん</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --text: #f5f7fb;
+    --muted: #8b93a7;
+    --line: rgba(255, 255, 255, 0.08);
+    --soft: rgba(255, 255, 255, 0.04);
+    --accent: #7c5cff;
+    --accent-2: #38bdf8;
+    --success: #22c55e;
+    --danger: #ef4444;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(600px 400px at 10% -10%, rgba(124, 92, 255, 0.22), transparent 60%),
+      radial-gradient(500px 400px at 110% 20%, rgba(56, 189, 248, 0.16), transparent 60%),
+      radial-gradient(500px 400px at 50% 110%, rgba(244, 114, 182, 0.12), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 28px 20px calc(32px + env(safe-area-inset-bottom));
+  }
+
+  .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .section + .section { margin-top: 28px; }
+
+  /* Person picker */
+  .persons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .person {
+    position: relative;
+    cursor: pointer;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 6px;
+    text-align: center;
+    user-select: none;
+    transition: transform 0.12s ease, background 0.18s;
+  }
+
+  .person:active { transform: scale(0.97); }
+  .person input { position: absolute; opacity: 0; pointer-events: none; }
+  .person .emoji { font-size: 26px; line-height: 1; display: block; margin-bottom: 6px; }
+  .person .name { font-size: 13px; font-weight: 600; }
+
+  .person[data-id="funjin"][data-active="true"] { border-color: transparent; background: linear-gradient(135deg, rgba(255, 122, 89, 0.35), rgba(239, 68, 68, 0.2)); box-shadow: 0 8px 24px -12px rgba(255, 122, 89, 0.7); }
+  .person[data-id="pants"][data-active="true"]  { border-color: transparent; background: linear-gradient(135deg, rgba(244, 114, 182, 0.35), rgba(236, 72, 153, 0.2)); box-shadow: 0 8px 24px -12px rgba(244, 114, 182, 0.7); }
+  .person[data-id="jaga"][data-active="true"]   { border-color: transparent; background: linear-gradient(135deg, rgba(250, 204, 21, 0.35), rgba(245, 158, 11, 0.2)); box-shadow: 0 8px 24px -12px rgba(250, 204, 21, 0.7); }
+
+  /* Beneficiary toggles */
+  .beneficiaries {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .bene {
+    position: relative;
+    cursor: pointer;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 6px;
+    text-align: center;
+    user-select: none;
+    transition: transform 0.12s ease, opacity 0.18s, background 0.18s;
+  }
+
+  .bene:active { transform: scale(0.97); }
+  .bene input { position: absolute; opacity: 0; pointer-events: none; }
+  .bene .emoji { font-size: 20px; line-height: 1; display: block; margin-bottom: 2px; }
+  .bene .name { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .bene[data-active="true"] {
+    background: rgba(124, 92, 255, 0.14);
+    border-color: rgba(124, 92, 255, 0.45);
+  }
+  .bene[data-active="true"] .name { color: var(--text); }
+  .bene[data-active="false"] { opacity: 0.35; }
+  .bene[data-active="false"] .emoji { filter: grayscale(0.8); }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .section-head .label { margin-bottom: 0; }
+
+  .hint {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* Input row */
+  .inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 14px;
+    color: var(--text);
+    font-size: 16px;
+    font-family: inherit;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+
+  input[type="number"] { font-variant-numeric: tabular-nums; font-weight: 700; }
+  input::placeholder { color: rgba(255, 255, 255, 0.25); }
+
+  input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(124, 92, 255, 0.08);
+    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.15);
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+  }
+
+  .add-btn {
+    width: 100%;
+    margin-top: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 14px;
+    border-radius: 12px;
+    transition: transform 0.1s ease, box-shadow 0.2s;
+    box-shadow: 0 10px 24px -12px rgba(124, 92, 255, 0.8);
+  }
+
+  .add-btn:active { transform: scale(0.98); }
+  .add-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+  /* Entries */
+  .entries {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .entry-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--line);
+    animation: slideIn 0.22s ease;
+  }
+
+  .entry-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+  }
+
+  .entry-meta .mini {
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    font-size: 10px;
+  }
+
+  .entry-meta .dot {
+    color: var(--muted);
+    font-size: 11px;
+    margin: 0 2px;
+  }
+
+  .entry-meta .note-text {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-left: 4px;
+  }
+
+  .entry-item:last-child { border-bottom: none; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+
+  .avatar[data-id="funjin"] { background: linear-gradient(135deg, #ff7a59, #ef4444); }
+  .avatar[data-id="pants"]  { background: linear-gradient(135deg, #f472b6, #ec4899); }
+  .avatar[data-id="jaga"]   { background: linear-gradient(135deg, #facc15, #f59e0b); }
+
+  /* Plain emoji avatars (no background) in history, breakdown, and settlements */
+  .entries .avatar,
+  .breakdown .avatar,
+  .settlement .avatar {
+    background: none !important;
+    width: 30px;
+    height: 30px;
+    font-size: 22px;
+  }
+  .entries .mini.avatar {
+    width: 16px;
+    height: 16px;
+    font-size: 13px;
+  }
+
+  .entry-info { display: flex; flex-direction: column; min-width: 0; }
+  .entry-name { font-size: 14px; font-weight: 600; }
+  .entry-note { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry-amount { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+
+  .delete-btn {
+    background: transparent;
+    color: var(--muted);
+    font-size: 20px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    transition: all 0.15s;
+  }
+
+  .delete-btn:active { background: rgba(239, 68, 68, 0.18); color: var(--danger); }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 24px 0;
+  }
+
+  /* Summary */
+  .grand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 8px 0 14px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 14px;
+  }
+
+  .grand .k { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .grand .v {
+    font-size: 26px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(135deg, #a78bfa, #38bdf8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .bd-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 14px;
+  }
+
+  .bd-row .n { font-weight: 600; }
+  .bd-row .a { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--muted); }
+
+  .settlements {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .settlement {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 2px;
+    animation: slideIn 0.28s ease;
+  }
+
+  .settlement + .settlement {
+    border-top: 1px solid var(--line);
+  }
+
+  .settlement .text {
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .settlement .text .arrow {
+    color: var(--muted);
+    font-weight: 500;
+    margin: 0 6px;
+  }
+
+  .settlement .amt {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .settled {
+    text-align: center;
+    padding: 16px 0;
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .clear-btn {
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    padding: 0;
+    transition: color 0.15s;
+  }
+
+  .clear-btn:active { color: var(--danger); }
+</style>
+</head>
+<body>
+  <div class="app">
+    <form class="section" id="entry-form" autocomplete="off">
+      <div class="label">誰が払った？</div>
+      <div class="persons" id="person-picker">
+        <label class="person" data-id="funjin">
+          <input type="radio" name="person" value="funjin" />
+          <span class="emoji">💥</span>
+          <span class="name">粉塵爆発</span>
+        </label>
+        <label class="person" data-id="pants">
+          <input type="radio" name="person" value="pants" />
+          <span class="emoji">🩲</span>
+          <span class="name">ぱんつ</span>
+        </label>
+        <label class="person" data-id="jaga">
+          <input type="radio" name="person" value="jaga" />
+          <span class="emoji">🥔</span>
+          <span class="name">じゃが</span>
+        </label>
+      </div>
+
+      <div class="section-head" style="margin-top: 18px;">
+        <div class="label">誰の分？</div>
+        <span class="hint" id="bene-hint">全員</span>
+      </div>
+      <div class="beneficiaries" id="bene-picker">
+        <label class="bene" data-id="funjin" data-active="true">
+          <input type="checkbox" name="bene" value="funjin" checked />
+          <span class="emoji">💥</span>
+          <span class="name">粉塵爆発</span>
+        </label>
+        <label class="bene" data-id="pants" data-active="true">
+          <input type="checkbox" name="bene" value="pants" checked />
+          <span class="emoji">🩲</span>
+          <span class="name">ぱんつ</span>
+        </label>
+        <label class="bene" data-id="jaga" data-active="true">
+          <input type="checkbox" name="bene" value="jaga" checked />
+          <span class="emoji">🥔</span>
+          <span class="name">じゃが</span>
+        </label>
+      </div>
+
+      <div class="inputs">
+        <input type="number" id="amount" min="1" step="1" inputmode="numeric" placeholder="金額 ¥" required />
+        <input type="text" id="note" placeholder="メモ (任意)" maxlength="60" />
+      </div>
+
+      <button type="submit" class="add-btn">追加する</button>
+    </form>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="label">履歴</div>
+        <button class="clear-btn" id="reset-btn" type="button">全削除</button>
+      </div>
+      <ul class="entries" id="entries-list"></ul>
+      <div class="empty" id="empty-state">まだ何も登録されていません</div>
+    </section>
+
+    <section class="section" id="summary-section" style="display:none;">
+      <div class="label">集計</div>
+
+      <div class="grand">
+        <span class="k">合計</span>
+        <span class="v" id="grand-total">¥0</span>
+      </div>
+
+      <div class="breakdown" id="breakdown"></div>
+    </section>
+
+    <section class="section" id="settle-section" style="display:none;">
+      <div class="label">精算</div>
+      <div class="settlements" id="settlements"></div>
+    </section>
+
+  </div>
+
+<script>
+  const PEOPLE = [
+    { id: "funjin", name: "粉塵爆発", emoji: "💥" },
+    { id: "pants",  name: "ぱんつ",   emoji: "🩲" },
+    { id: "jaga",   name: "じゃが",   emoji: "🥔" },
+  ];
+
+  const byId = (id) => PEOPLE.find(p => p.id === id);
+  const STORAGE_KEY = "warikan-kun:v1";
+
+  const loadEntries = () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveEntries = (e) => localStorage.setItem(STORAGE_KEY, JSON.stringify(e));
+  const formatYen = (n) => `¥${Math.round(n).toLocaleString("ja-JP")}`;
+
+  let entries = loadEntries();
+
+  const picker = document.getElementById("person-picker");
+  picker.addEventListener("change", () => {
+    const selected = picker.querySelector('input[name="person"]:checked')?.value;
+    picker.querySelectorAll(".person").forEach(el => {
+      el.dataset.active = String(el.dataset.id === selected);
+    });
+  });
+
+  const benePicker = document.getElementById("bene-picker");
+  const beneHint = document.getElementById("bene-hint");
+
+  const updateBeneUI = () => {
+    const checked = [];
+    benePicker.querySelectorAll('input[name="bene"]').forEach(el => {
+      const label = el.closest(".bene");
+      label.dataset.active = String(el.checked);
+      if (el.checked) checked.push(el.value);
+    });
+    if (checked.length === 3) beneHint.textContent = "全員";
+    else if (checked.length === 0) beneHint.textContent = "未選択";
+    else beneHint.textContent = checked.map(id => byId(id).name).join(" / ");
+  };
+
+  benePicker.addEventListener("change", updateBeneUI);
+  updateBeneUI();
+
+  const form = document.getElementById("entry-form");
+  const amountInput = document.getElementById("amount");
+  const noteInput = document.getElementById("note");
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const person = picker.querySelector('input[name="person"]:checked')?.value;
+    const amount = Number(amountInput.value);
+    const note = noteInput.value.trim();
+    const beneficiaries = Array.from(
+      benePicker.querySelectorAll('input[name="bene"]:checked')
+    ).map(el => el.value);
+
+    if (!person) { alert("誰が払ったかを選んでください"); return; }
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (beneficiaries.length === 0) { alert("誰の分かを1人以上選んでください"); return; }
+
+    entries = [
+      { id: crypto.randomUUID(), person, amount, note, beneficiaries, createdAt: Date.now() },
+      ...entries,
+    ];
+    saveEntries(entries);
+    render();
+
+    amountInput.value = "";
+    noteInput.value = "";
+    amountInput.focus();
+  });
+
+  document.getElementById("reset-btn").addEventListener("click", () => {
+    if (entries.length === 0) return;
+    if (!confirm("全ての履歴を削除します。よろしいですか？")) return;
+    entries = [];
+    saveEntries(entries);
+    render();
+  });
+
+  document.getElementById("entries-list").addEventListener("click", (e) => {
+    const btn = e.target.closest(".delete-btn");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    entries = entries.filter(x => x.id !== id);
+    saveEntries(entries);
+    render();
+  });
+
+  const beneOf = (entry) => {
+    if (Array.isArray(entry.beneficiaries) && entry.beneficiaries.length > 0) {
+      return entry.beneficiaries;
+    }
+    return PEOPLE.map(p => p.id);
+  };
+
+  const computeBalances = () => {
+    const bal = {};
+    for (const p of PEOPLE) bal[p.id] = 0;
+    for (const e of entries) {
+      const bene = beneOf(e);
+      const share = e.amount / bene.length;
+      bal[e.person] = (bal[e.person] || 0) + e.amount;
+      for (const b of bene) bal[b] = (bal[b] || 0) - share;
+    }
+    return bal;
+  };
+
+  const computeSettlements = (balances) => {
+    const list = PEOPLE.map(p => ({ id: p.id, balance: balances[p.id] || 0 }));
+    const creditors = list.filter(b => b.balance > 0.5).sort((a, b) => b.balance - a.balance);
+    const debtors   = list.filter(b => b.balance < -0.5).sort((a, b) => a.balance - b.balance);
+
+    const results = [];
+    let i = 0, j = 0;
+    while (i < debtors.length && j < creditors.length) {
+      const d = debtors[i];
+      const c = creditors[j];
+      const pay = Math.min(-d.balance, c.balance);
+      const rounded = Math.round(pay);
+      if (rounded > 0) results.push({ from: d.id, to: c.id, amount: rounded });
+      d.balance += pay;
+      c.balance -= pay;
+      if (Math.abs(d.balance) < 0.5) i++;
+      if (Math.abs(c.balance) < 0.5) j++;
+    }
+    return results;
+  };
+
+  const escapeHtml = (s) => s.replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+
+  const renderEntries = () => {
+    const list = document.getElementById("entries-list");
+    const empty = document.getElementById("empty-state");
+    list.innerHTML = "";
+    if (entries.length === 0) {
+      empty.style.display = "block";
+      return;
+    }
+    empty.style.display = "none";
+    for (const entry of entries) {
+      const p = byId(entry.person);
+      if (!p) continue;
+      const bene = beneOf(entry);
+      const isAll = bene.length === PEOPLE.length;
+      const beneHTML = isAll ? "" : `
+        <div class="entry-meta">
+          <span class="dot">→</span>
+          ${bene.map(id => {
+            const b = byId(id);
+            return b ? `<div class="mini avatar" data-id="${b.id}">${b.emoji}</div>` : "";
+          }).join("")}
+          ${entry.note ? `<span class="note-text">${escapeHtml(entry.note)}</span>` : ""}
+        </div>`;
+      const noteInline = (isAll && entry.note)
+        ? `<span class="entry-note">${escapeHtml(entry.note)}</span>` : "";
+      const li = document.createElement("li");
+      li.className = "entry-item";
+      li.innerHTML = `
+        <div class="avatar" data-id="${p.id}">${p.emoji}</div>
+        <div class="entry-info">
+          <span class="entry-name">${p.name}</span>
+          ${noteInline}
+          ${beneHTML}
+        </div>
+        <div class="entry-amount">${formatYen(entry.amount)}</div>
+        <button class="delete-btn" data-id="${entry.id}" aria-label="削除" title="削除">×</button>
+      `;
+      list.appendChild(li);
+    }
+  };
+
+  const renderSummary = () => {
+    const summary = document.getElementById("summary-section");
+    const settle = document.getElementById("settle-section");
+
+    if (entries.length === 0) {
+      summary.style.display = "none";
+      settle.style.display = "none";
+      return;
+    }
+    summary.style.display = "block";
+    settle.style.display = "block";
+
+    const totals = {};
+    for (const p of PEOPLE) totals[p.id] = 0;
+    for (const e of entries) totals[e.person] = (totals[e.person] || 0) + e.amount;
+
+    const grand = Object.values(totals).reduce((s, v) => s + v, 0);
+    document.getElementById("grand-total").textContent = formatYen(grand);
+
+    const balances = computeBalances();
+    document.getElementById("breakdown").innerHTML = PEOPLE.map(p => {
+      const bal = Math.round(balances[p.id] || 0);
+      const paid = totals[p.id] || 0;
+      const sign = bal > 0 ? "+" : bal < 0 ? "−" : "±";
+      const color = bal > 0 ? "#4ade80" : bal < 0 ? "#f87171" : "var(--muted)";
+      return `
+        <div class="bd-row">
+          <div class="avatar" data-id="${p.id}">${p.emoji}</div>
+          <span class="n">${p.name}<span style="color: var(--muted); font-weight: 500; font-size: 12px; margin-left: 6px;">払${formatYen(paid)}</span></span>
+          <span class="a" style="color: ${color};">${sign}${formatYen(Math.abs(bal))}</span>
+        </div>`;
+    }).join("");
+
+    const settlementsEl = document.getElementById("settlements");
+    const settlements = computeSettlements(balances);
+    if (settlements.length === 0) {
+      settlementsEl.innerHTML = `<div class="settled">✨ ぴったり均等、精算不要</div>`;
+      return;
+    }
+    settlementsEl.innerHTML = settlements.map(s => {
+      const from = byId(s.from);
+      const to = byId(s.to);
+      return `
+        <div class="settlement">
+          <span class="text">${from.emoji}${from.name}<span class="arrow">→</span>${to.emoji}${to.name}</span>
+          <span class="amt">${formatYen(s.amount)}</span>
+        </div>
+      `;
+    }).join("");
+  };
+
+  const render = () => { renderEntries(); renderSummary(); };
+  render();
+</script>
+</body>
+</html>
