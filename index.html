@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#0b0f1a" />
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-<link rel="apple-touch-icon" href="favicon.svg" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="割り勘くん" />
 <title>割り勘くん</title>
 <meta name="description" content="割り勘のためのアプリ" />
 <meta property="og:type" content="website" />
@@ -412,10 +416,165 @@
   }
 
   .clear-btn:active { color: var(--danger); }
+
+  /* Room bar */
+  .room-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 auto 28px;
+    padding: 10px 16px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    width: fit-content;
+    max-width: 100%;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .room-bar:active { transform: scale(0.97); }
+  .room-bar .home { font-size: 15px; line-height: 1; }
+  .room-bar .name { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .room-bar .caret { color: var(--muted); font-size: 10px; }
+
+  /* Room sheet */
+  dialog.sheet {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    max-width: none;
+    max-height: none;
+    width: 100%;
+    height: 100%;
+    color: var(--text);
+  }
+
+  dialog.sheet::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .sheet-inner {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 22px 20px calc(28px + env(safe-area-inset-bottom));
+    background: #14192a;
+    border-top: 1px solid var(--line);
+    border-radius: 22px 22px 0 0;
+    animation: slideUp 0.24s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .sheet-head .title { font-size: 16px; font-weight: 700; }
+  .sheet-head .close {
+    background: transparent;
+    color: var(--muted);
+    font-size: 22px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+  }
+
+  .room-list { display: flex; flex-direction: column; }
+
+  .room-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .room-row:last-child { border-bottom: none; }
+
+  .room-pick {
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    padding: 14px 4px;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .room-pick .dot { color: var(--muted); font-size: 14px; width: 14px; text-align: center; }
+  .room-row[data-current="true"] .room-pick .dot { color: var(--accent-2); }
+  .room-pick .rn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .room-edit, .room-del {
+    background: transparent;
+    color: var(--muted);
+    font-size: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    transition: color 0.15s, background 0.15s;
+  }
+  .room-edit:active { color: var(--accent-2); }
+  .room-del:active { color: var(--danger); background: rgba(239, 68, 68, 0.12); }
+
+  .room-create {
+    width: 100%;
+    margin-top: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 13px;
+    border-radius: 12px;
+    transition: transform 0.1s ease;
+  }
+  .room-create:active { transform: scale(0.98); }
 </style>
 </head>
 <body>
   <div class="app">
+    <button class="room-bar" id="room-bar" type="button" aria-haspopup="dialog">
+      <span class="home">🏠</span>
+      <span class="name" id="room-bar-name">部屋</span>
+      <span class="caret">▼</span>
+    </button>
+
+    <dialog class="sheet" id="room-sheet" aria-label="部屋の切り替え">
+      <div class="sheet-inner">
+        <div class="sheet-head">
+          <span class="title">部屋</span>
+          <button class="close" id="room-sheet-close" aria-label="閉じる" type="button">×</button>
+        </div>
+        <div class="room-list" id="room-list"></div>
+        <button class="room-create" id="room-create" type="button">＋ 新しい部屋</button>
+      </div>
+    </dialog>
+
     <form class="section" id="entry-form" autocomplete="off">
       <div class="label">誰が払った？</div>
       <div class="persons" id="person-picker">
@@ -501,23 +660,185 @@
   ];
 
   const byId = (id) => PEOPLE.find(p => p.id === id);
-  const STORAGE_KEY = "warikan-kun:v1";
 
-  const loadEntries = () => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
+  const STORAGE = {
+    rooms: "warikan-kun:v2:rooms",
+    current: "warikan-kun:v2:current",
+    entries: (id) => `warikan-kun:v2:entries:${id}`,
+    v1: "warikan-kun:v1",
+  };
+
+  const formatYen = (n) => `¥${Math.round(n).toLocaleString("ja-JP")}`;
+  const newId = () => crypto.randomUUID().split("-")[0];
+
+  const safeParse = (raw, fallback) => {
+    try { const v = JSON.parse(raw); return v ?? fallback; } catch { return fallback; }
+  };
+
+  const loadRooms = () => {
+    const raw = localStorage.getItem(STORAGE.rooms);
+    return raw ? (Array.isArray(safeParse(raw, [])) ? safeParse(raw, []) : []) : [];
+  };
+  const saveRooms = (rs) => localStorage.setItem(STORAGE.rooms, JSON.stringify(rs));
+  const loadEntries = (roomId) => {
+    if (!roomId) return [];
+    const raw = localStorage.getItem(STORAGE.entries(roomId));
+    const parsed = raw ? safeParse(raw, []) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  };
+  const saveEntriesFor = (roomId, e) => localStorage.setItem(STORAGE.entries(roomId), JSON.stringify(e));
+
+  const migrate = () => {
+    let rs = loadRooms();
+    if (rs.length > 0) return rs;
+    const v1raw = localStorage.getItem(STORAGE.v1);
+    const v1Entries = v1raw ? safeParse(v1raw, null) : null;
+    const id = newId();
+    const room = { id, name: "デフォルト", createdAt: Date.now() };
+    saveRooms([room]);
+    if (Array.isArray(v1Entries) && v1Entries.length > 0) {
+      saveEntriesFor(id, v1Entries);
+    }
+    localStorage.setItem(STORAGE.current, id);
+    return [room];
+  };
+
+  let rooms = migrate();
+
+  const readHashRoom = () => {
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+    return hash.get("r");
+  };
+  const writeHashRoom = (id) => {
+    const hash = new URLSearchParams();
+    hash.set("r", id);
+    history.replaceState(null, "", "#" + hash.toString());
+  };
+
+  let currentRoomId = (() => {
+    const fromHash = readHashRoom();
+    if (fromHash && rooms.find(r => r.id === fromHash)) return fromHash;
+    const stored = localStorage.getItem(STORAGE.current);
+    if (stored && rooms.find(r => r.id === stored)) return stored;
+    return rooms[0]?.id || null;
+  })();
+
+  let entries = loadEntries(currentRoomId);
+  if (currentRoomId) writeHashRoom(currentRoomId);
+  const persistEntries = () => saveEntriesFor(currentRoomId, entries);
+
+  const setCurrentRoom = (id) => {
+    if (id === currentRoomId) return;
+    currentRoomId = id;
+    entries = loadEntries(id);
+    localStorage.setItem(STORAGE.current, id);
+    writeHashRoom(id);
+    render();
+  };
+
+  const createRoom = (name) => {
+    const id = newId();
+    rooms = [...rooms, { id, name, createdAt: Date.now() }];
+    saveRooms(rooms);
+    saveEntriesFor(id, []);
+    setCurrentRoom(id);
+  };
+
+  const renameRoom = (id, name) => {
+    rooms = rooms.map(r => r.id === id ? { ...r, name } : r);
+    saveRooms(rooms);
+    renderRoomBar();
+    renderRoomList();
+  };
+
+  const deleteRoom = (id) => {
+    if (rooms.length <= 1) { alert("最後の部屋は削除できません"); return; }
+    const wasCurrent = id === currentRoomId;
+    rooms = rooms.filter(r => r.id !== id);
+    saveRooms(rooms);
+    localStorage.removeItem(STORAGE.entries(id));
+    if (wasCurrent) {
+      currentRoomId = rooms[0].id;
+      entries = loadEntries(currentRoomId);
+      localStorage.setItem(STORAGE.current, currentRoomId);
+      writeHashRoom(currentRoomId);
+      render();
+    } else {
+      renderRoomList();
     }
   };
 
-  const saveEntries = (e) => localStorage.setItem(STORAGE_KEY, JSON.stringify(e));
-  const formatYen = (n) => `¥${Math.round(n).toLocaleString("ja-JP")}`;
+  const sheet = document.getElementById("room-sheet");
+  const roomBarBtn = document.getElementById("room-bar");
+  const roomListEl = document.getElementById("room-list");
 
-  let entries = loadEntries();
+  const renderRoomBar = () => {
+    const cur = rooms.find(r => r.id === currentRoomId);
+    document.getElementById("room-bar-name").textContent = cur?.name || "部屋";
+  };
+
+  const renderRoomList = () => {
+    roomListEl.innerHTML = rooms.map(r => `
+      <div class="room-row" data-current="${r.id === currentRoomId}">
+        <button class="room-pick" data-id="${r.id}" type="button">
+          <span class="dot">${r.id === currentRoomId ? "●" : "○"}</span>
+          <span class="rn">${escapeHtml(r.name)}</span>
+        </button>
+        <button class="room-edit" data-id="${r.id}" type="button" aria-label="名前変更">✎</button>
+        <button class="room-del" data-id="${r.id}" type="button" aria-label="削除">×</button>
+      </div>
+    `).join("");
+  };
+
+  roomBarBtn.addEventListener("click", () => {
+    renderRoomList();
+    sheet.showModal();
+  });
+  document.getElementById("room-sheet-close").addEventListener("click", () => sheet.close());
+  sheet.addEventListener("click", (e) => {
+    if (e.target === sheet) sheet.close();
+  });
+  document.getElementById("room-create").addEventListener("click", () => {
+    const name = prompt("部屋の名前");
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    createRoom(trimmed.slice(0, 30));
+    sheet.close();
+  });
+  roomListEl.addEventListener("click", (e) => {
+    const pick = e.target.closest(".room-pick");
+    const edit = e.target.closest(".room-edit");
+    const del = e.target.closest(".room-del");
+    if (pick) {
+      setCurrentRoom(pick.dataset.id);
+      sheet.close();
+    } else if (edit) {
+      const cur = rooms.find(r => r.id === edit.dataset.id);
+      const next = prompt("新しい名前", cur?.name || "");
+      if (!next) return;
+      const trimmed = next.trim();
+      if (!trimmed) return;
+      renameRoom(edit.dataset.id, trimmed.slice(0, 30));
+    } else if (del) {
+      const cur = rooms.find(r => r.id === del.dataset.id);
+      if (!confirm(`「${cur?.name || ""}」と全ての履歴を削除します。よろしいですか？`)) return;
+      deleteRoom(del.dataset.id);
+    }
+  });
+
+  window.addEventListener("hashchange", () => {
+    const fromHash = readHashRoom();
+    if (fromHash && fromHash !== currentRoomId && rooms.find(r => r.id === fromHash)) {
+      setCurrentRoom(fromHash);
+    }
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
 
   const picker = document.getElementById("person-picker");
   picker.addEventListener("change", () => {
@@ -566,7 +887,7 @@
       { id: crypto.randomUUID(), person, amount, note, beneficiaries, createdAt: Date.now() },
       ...entries,
     ];
-    saveEntries(entries);
+    persistEntries();
     render();
 
     amountInput.value = "";
@@ -578,7 +899,7 @@
     if (entries.length === 0) return;
     if (!confirm("全ての履歴を削除します。よろしいですか？")) return;
     entries = [];
-    saveEntries(entries);
+    persistEntries();
     render();
   });
 
@@ -587,7 +908,7 @@
     if (!btn) return;
     const id = btn.dataset.id;
     entries = entries.filter(x => x.id !== id);
-    saveEntries(entries);
+    persistEntries();
     render();
   });
 
@@ -727,7 +1048,7 @@
     }).join("");
   };
 
-  const render = () => { renderEntries(); renderSummary(); };
+  const render = () => { renderRoomBar(); renderEntries(); renderSummary(); };
   render();
 </script>
 </body>
