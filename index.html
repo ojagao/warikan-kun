@@ -1221,6 +1221,20 @@
   }
 
   const picker = document.getElementById("person-picker");
+  const benePicker = document.getElementById("bene-picker");
+  const beneHint = document.getElementById("bene-hint");
+  const form = document.getElementById("entry-form");
+  const amountInput = document.getElementById("amount");
+  const noteInput = document.getElementById("note");
+  const doneBtn = document.getElementById("es-done");
+
+  const updateDoneState = () => {
+    const person = picker.querySelector('input[name="person"]:checked')?.value;
+    const amount = Number(amountInput.value);
+    const beneCount = benePicker.querySelectorAll('input[name="bene"]:checked').length;
+    doneBtn.disabled = !(person && Number.isFinite(amount) && amount > 0 && beneCount > 0);
+  };
+
   picker.addEventListener("change", () => {
     const selected = picker.querySelector('input[name="person"]:checked')?.value;
     picker.querySelectorAll("label[data-id]").forEach(el => {
@@ -1228,9 +1242,6 @@
     });
     updateDoneState();
   });
-
-  const benePicker = document.getElementById("bene-picker");
-  const beneHint = document.getElementById("bene-hint");
 
   const updateBeneUI = () => {
     const checked = [];
@@ -1247,18 +1258,6 @@
 
   benePicker.addEventListener("change", updateBeneUI);
   updateBeneUI();
-
-  const form = document.getElementById("entry-form");
-  const amountInput = document.getElementById("amount");
-  const noteInput = document.getElementById("note");
-  const doneBtn = document.getElementById("es-done");
-
-  const updateDoneState = () => {
-    const person = picker.querySelector('input[name="person"]:checked')?.value;
-    const amount = Number(amountInput.value);
-    const beneCount = benePicker.querySelectorAll('input[name="bene"]:checked').length;
-    doneBtn.disabled = !(person && Number.isFinite(amount) && amount > 0 && beneCount > 0);
-  };
 
   amountInput.addEventListener("input", updateDoneState);
 
