@@ -417,12 +417,21 @@
 
   .clear-btn:active { color: var(--danger); }
 
+  /* Top bar */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
   /* Room bar */
   .room-bar {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 0 auto 28px;
     padding: 10px 16px;
     background: var(--soft);
     border: 1px solid var(--line);
@@ -431,12 +440,47 @@
     font-weight: 600;
     color: var(--text);
     cursor: pointer;
-    width: fit-content;
     max-width: 100%;
     transition: background 0.15s, transform 0.1s;
   }
 
   .room-bar:active { transform: scale(0.97); }
+
+  .share-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 16px;
+    display: grid;
+    place-items: center;
+    transition: transform 0.1s, background 0.15s;
+  }
+  .share-btn:active { transform: scale(0.95); background: rgba(124, 92, 255, 0.18); }
+
+  .sync-badge {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    flex-basis: 100%;
+    text-align: center;
+    margin-top: 4px;
+  }
+  .sync-badge[data-status="syncing"] { color: var(--accent-2); border-color: rgba(56, 189, 248, 0.3); }
+  .sync-badge[data-status="offline"] { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
+  .sync-badge[data-status="idle"]    { color: #4ade80; border-color: rgba(74, 222, 128, 0.25); }
+  .sync-badge[data-status="conflict"]{ color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+
+  @media (min-width: 420px) {
+    .sync-badge { flex-basis: auto; margin-top: 0; }
+  }
   .room-bar .home { font-size: 15px; line-height: 1; }
   .room-bar .name { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .room-bar .caret { color: var(--muted); font-size: 10px; }
@@ -656,11 +700,15 @@
 </head>
 <body>
   <div class="app">
-    <button class="room-bar" id="room-bar" type="button" aria-haspopup="dialog">
-      <span class="home">🏠</span>
-      <span class="name" id="room-bar-name">部屋</span>
-      <span class="caret">▼</span>
-    </button>
+    <div class="top-bar">
+      <button class="room-bar" id="room-bar" type="button" aria-haspopup="dialog">
+        <span class="home">🏠</span>
+        <span class="name" id="room-bar-name">部屋</span>
+        <span class="caret">▼</span>
+      </button>
+      <button class="share-btn" id="share-btn" type="button" aria-label="共有URLをコピー">↗</button>
+      <span class="sync-badge" id="sync-badge" data-status="idle">✓ 同期済み</span>
+    </div>
 
     <dialog class="sheet" id="room-sheet" aria-label="部屋の切り替え">
       <div class="sheet-inner">
@@ -775,11 +823,47 @@
     rooms: "warikan-kun:v2:rooms",
     current: "warikan-kun:v2:current",
     entries: (id) => `warikan-kun:v2:entries:${id}`,
+    version: (id) => `warikan-kun:v2:version:${id}`,
     v1: "warikan-kun:v1",
   };
 
+  const API_BASE = "/api/rooms";
+
   const formatYen = (n) => `¥${Math.round(n).toLocaleString("ja-JP")}`;
-  const newId = () => crypto.randomUUID().split("-")[0];
+  const newId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+
+  const loadVersion = (id) => localStorage.getItem(STORAGE.version(id)) || null;
+  const saveVersion = (id, v) => localStorage.setItem(STORAGE.version(id), v);
+
+  const apiGet = async (id) => {
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { method: "GET" });
+    if (res.status === 404) return { status: 404 };
+    if (!res.ok) throw new Error(`GET ${res.status}`);
+    return { status: 200, data: await res.json() };
+  };
+
+  const apiPut = async (id, body, ifMatch) => {
+    const headers = { "Content-Type": "application/json" };
+    if (ifMatch) headers["If-Match"] = `"${ifMatch}"`;
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(body),
+    });
+    if (res.status === 409) return { status: 409, conflict: (await res.json()).current };
+    if (!res.ok) throw new Error(`PUT ${res.status}`);
+    return { status: 200, data: await res.json() };
+  };
+
+  let syncStatus = "idle"; // idle | syncing | offline | conflict
+  const updateSyncBadge = () => {
+    const el = document.getElementById("sync-badge");
+    if (!el) return;
+    el.dataset.status = syncStatus;
+    const labels = { idle: "✓ 同期済み", syncing: "↻ 同期中", offline: "⚠ オフライン", conflict: "↻ 反映中" };
+    el.textContent = labels[syncStatus] || "";
+  };
+  const setSyncStatus = (s) => { syncStatus = s; updateSyncBadge(); };
 
   const safeParse = (raw, fallback) => {
     try { const v = JSON.parse(raw); return v ?? fallback; } catch { return fallback; }
@@ -837,6 +921,71 @@
   if (currentRoomId) writeHashRoom(currentRoomId);
   const persistEntries = () => saveEntriesFor(currentRoomId, entries);
 
+  let pushTimer = null;
+  const schedulePush = (roomId) => {
+    clearTimeout(pushTimer);
+    setSyncStatus("syncing");
+    pushTimer = setTimeout(() => pushRoom(roomId), 350);
+  };
+
+  const applyServerState = (roomId, data) => {
+    if (!data) return;
+    if (typeof data.name === "string" && data.name) {
+      const room = rooms.find(r => r.id === roomId);
+      if (room && room.name !== data.name) {
+        rooms = rooms.map(r => r.id === roomId ? { ...r, name: data.name } : r);
+        saveRooms(rooms);
+      }
+    }
+    const serverEntries = Array.isArray(data.entries) ? data.entries : [];
+    saveEntriesFor(roomId, serverEntries);
+    if (data.version) saveVersion(roomId, data.version);
+    if (roomId === currentRoomId) {
+      entries = serverEntries;
+      render();
+    } else {
+      renderRoomBar();
+      renderRoomList();
+    }
+  };
+
+  const pullRoom = async (roomId) => {
+    if (!roomId) return;
+    try {
+      setSyncStatus("syncing");
+      const res = await apiGet(roomId);
+      if (res.status === 200) {
+        applyServerState(roomId, res.data);
+        setSyncStatus("idle");
+      } else if (res.status === 404) {
+        await pushRoom(roomId, true);
+      }
+    } catch {
+      setSyncStatus("offline");
+    }
+  };
+
+  const pushRoom = async (roomId, ignoreVersion = false) => {
+    if (!roomId) return;
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+    const body = { name: room.name, entries: loadEntries(roomId) };
+    const v = ignoreVersion ? null : loadVersion(roomId);
+    try {
+      setSyncStatus("syncing");
+      const res = await apiPut(roomId, body, v);
+      if (res.status === 200) {
+        if (res.data.version) saveVersion(roomId, res.data.version);
+        setSyncStatus("idle");
+      } else if (res.status === 409) {
+        applyServerState(roomId, res.conflict);
+        setSyncStatus("idle");
+      }
+    } catch {
+      setSyncStatus("offline");
+    }
+  };
+
   const setCurrentRoom = (id) => {
     if (id === currentRoomId) return;
     currentRoomId = id;
@@ -844,6 +993,7 @@
     localStorage.setItem(STORAGE.current, id);
     writeHashRoom(id);
     render();
+    pullRoom(id);
   };
 
   const createRoom = (name) => {
@@ -851,7 +1001,12 @@
     rooms = [...rooms, { id, name, createdAt: Date.now() }];
     saveRooms(rooms);
     saveEntriesFor(id, []);
-    setCurrentRoom(id);
+    currentRoomId = id;
+    entries = [];
+    localStorage.setItem(STORAGE.current, id);
+    writeHashRoom(id);
+    render();
+    pushRoom(id, true);
   };
 
   const renameRoom = (id, name) => {
@@ -859,6 +1014,7 @@
     saveRooms(rooms);
     renderRoomBar();
     renderRoomList();
+    schedulePush(id);
   };
 
   const deleteRoom = (id) => {
@@ -867,14 +1023,52 @@
     rooms = rooms.filter(r => r.id !== id);
     saveRooms(rooms);
     localStorage.removeItem(STORAGE.entries(id));
+    localStorage.removeItem(STORAGE.version(id));
     if (wasCurrent) {
       currentRoomId = rooms[0].id;
       entries = loadEntries(currentRoomId);
       localStorage.setItem(STORAGE.current, currentRoomId);
       writeHashRoom(currentRoomId);
       render();
+      pullRoom(currentRoomId);
     } else {
       renderRoomList();
+    }
+  };
+
+  const joinRoomById = async (id) => {
+    if (!id) return false;
+    try {
+      const res = await apiGet(id);
+      if (res.status !== 200) return false;
+      const name = res.data.name || "共有された部屋";
+      rooms = [...rooms, { id, name, createdAt: Date.now() }];
+      saveRooms(rooms);
+      applyServerState(id, res.data);
+      currentRoomId = id;
+      entries = loadEntries(id);
+      localStorage.setItem(STORAGE.current, id);
+      render();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const shareCurrentRoom = async () => {
+    const url = new URL(location.href);
+    url.hash = `r=${currentRoomId}`;
+    const text = url.toString();
+    try {
+      await navigator.clipboard.writeText(text);
+      const badge = document.getElementById("sync-badge");
+      if (badge) {
+        const old = badge.textContent;
+        badge.textContent = "✓ URLコピー済";
+        setTimeout(() => { badge.textContent = old; updateSyncBadge(); }, 1500);
+      }
+    } catch {
+      prompt("このURLをコピーして共有してください", text);
     }
   };
 
@@ -1054,6 +1248,7 @@
     ];
     persistEntries();
     render();
+    schedulePush(currentRoomId);
 
     amountInput.value = "";
     noteInput.value = "";
@@ -1066,6 +1261,7 @@
     entries = [];
     persistEntries();
     render();
+    schedulePush(currentRoomId);
   });
 
   document.getElementById("entries-list").addEventListener("click", (e) => {
@@ -1075,6 +1271,7 @@
     entries = entries.filter(x => x.id !== id);
     persistEntries();
     render();
+    schedulePush(currentRoomId);
   });
 
   const beneOf = (entry) => {
@@ -1213,8 +1410,27 @@
     }).join("");
   };
 
-  const render = () => { renderRoomBar(); renderEntries(); renderSummary(); };
+  const render = () => { renderRoomBar(); renderEntries(); renderSummary(); updateSyncBadge(); };
   render();
+
+  // Initial sync: pull current room state from server.
+  // If hash references an unknown room, try to join it from the server.
+  (async () => {
+    const fromHash = readHashRoom();
+    if (fromHash && !rooms.find(r => r.id === fromHash)) {
+      const joined = await joinRoomById(fromHash);
+      if (joined) return;
+    }
+    if (currentRoomId) pullRoom(currentRoomId);
+  })();
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && currentRoomId) {
+      pullRoom(currentRoomId);
+    }
+  });
+
+  document.getElementById("share-btn")?.addEventListener("click", shareCurrentRoom);
 </script>
 </body>
 </html>
