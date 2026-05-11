@@ -559,11 +559,12 @@
     max-width: none;
     max-height: none;
     color: var(--text);
+    --sheet-progress: 0;
   }
   dialog.sheet::backdrop {
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, calc(0.4 * (1 - var(--sheet-progress, 0))));
+    backdrop-filter: blur(calc(8px * (1 - var(--sheet-progress, 0))));
+    -webkit-backdrop-filter: blur(calc(8px * (1 - var(--sheet-progress, 0))));
   }
   .sheet-inner {
     position: fixed;
@@ -578,18 +579,33 @@
     animation: slideUp 0.28s ease-out;
     max-height: 92vh;
     overflow-y: auto;
+    will-change: transform;
   }
   @keyframes slideUp {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
   }
   .handle {
+    width: 60px;
+    height: 22px;
+    margin: 4px auto 2px;
+    display: grid;
+    place-items: center;
+    cursor: grab;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .handle::before {
+    content: "";
     width: 36px;
     height: 5px;
     border-radius: 2.5px;
     background: var(--bg-elev-3);
-    margin: 6px auto 4px;
+    transition: background 0.15s;
   }
+  .handle:active { cursor: grabbing; }
+  .handle:active::before { background: var(--text-2); }
 
   .sheet-head {
     display: grid;
@@ -1883,6 +1899,117 @@
     pullingActive = false;
     pullArmed = false;
   }, { passive: true });
+
+  /* --- Drag-down handle to dismiss --- */
+  const setupSheetDrag = (dialogId) => {
+    const dialog = document.getElementById(dialogId);
+    if (!dialog) return;
+    const inner = dialog.querySelector(".sheet-inner");
+    const handle = inner?.querySelector(".handle");
+    if (!handle) return;
+
+    let pointerId = null;
+    let startY = 0;
+    let currentDy = 0;
+    let sheetHeight = 0;
+    let dragging = false;
+
+    const setProgress = (dy) => {
+      currentDy = Math.max(0, dy);
+      inner.style.transform = `translateY(${currentDy}px)`;
+      const p = sheetHeight ? Math.min(1, currentDy / sheetHeight) : 0;
+      dialog.style.setProperty("--sheet-progress", p);
+    };
+
+    const animateTo = (targetDy, duration, onDone) => {
+      const fromDy = currentDy;
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 2);
+        const dy = fromDy + (targetDy - fromDy) * eased;
+        currentDy = dy;
+        inner.style.transform = `translateY(${dy}px)`;
+        const p = sheetHeight ? Math.min(1, dy / sheetHeight) : 0;
+        dialog.style.setProperty("--sheet-progress", p);
+        if (t < 1) requestAnimationFrame(step);
+        else if (onDone) onDone();
+      };
+      requestAnimationFrame(step);
+    };
+
+    const snapBack = () => animateTo(0, 200, () => {
+      inner.style.transform = "";
+      dialog.style.setProperty("--sheet-progress", 0);
+      currentDy = 0;
+    });
+
+    const dismissDown = () => animateTo(sheetHeight, 220, () => {
+      dialog.close();
+    });
+
+    const cleanup = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+
+    const onDown = (e) => {
+      if (pointerId !== null) return;
+      pointerId = e.pointerId;
+      startY = e.clientY;
+      sheetHeight = inner.offsetHeight;
+      dragging = false;
+      inner.style.animation = "none"; // suppress slideUp keyframe during drag
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    };
+
+    const onMove = (e) => {
+      if (pointerId !== e.pointerId) return;
+      const dy = e.clientY - startY;
+      if (!dragging && dy > 3) dragging = true;
+      if (!dragging) return;
+      setProgress(dy);
+    };
+
+    const onUp = (e) => {
+      if (pointerId !== e.pointerId) return;
+      cleanup();
+      pointerId = null;
+      if (!dragging) {
+        inner.style.animation = "";
+        return;
+      }
+      dragging = false;
+      const threshold = Math.min(120, sheetHeight * 0.3);
+      if (currentDy >= threshold) {
+        dismissDown();
+      } else {
+        snapBack();
+      }
+    };
+
+    handle.addEventListener("pointerdown", onDown);
+
+    // Reset inline transform after dialog closes (e.g., ESC or programmatic)
+    dialog.addEventListener("close", () => {
+      inner.style.transform = "";
+      inner.style.animation = "";
+      dialog.style.setProperty("--sheet-progress", 0);
+      currentDy = 0;
+      dragging = false;
+      pointerId = null;
+      cleanup();
+    });
+  };
+
+  setupSheetDrag("entry-sheet");
+  setupSheetDrag("room-sheet");
+
+  // Reset entry form whenever the sheet closes (covers drag, ESC, backdrop tap, submit)
+  entrySheet.addEventListener("close", resetEntryForm);
 </script>
 </body>
 </html>
