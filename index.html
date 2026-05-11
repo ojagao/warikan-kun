@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#0b0f1a" />
+<meta name="theme-color" content="#000000" />
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="manifest" href="manifest.webmanifest" />
@@ -20,795 +20,810 @@
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="割り勘くん" />
 <meta name="twitter:description" content="割り勘のためのアプリ" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0b0f1a;
-    --text: #f5f7fb;
-    --muted: #8b93a7;
-    --line: rgba(255, 255, 255, 0.08);
-    --soft: rgba(255, 255, 255, 0.04);
-    --accent: #7c5cff;
-    --accent-2: #38bdf8;
-    --success: #22c55e;
-    --danger: #ef4444;
+    --bg: #000;
+    --bg-elev-1: #1c1c1e;
+    --bg-elev-2: #2c2c2e;
+    --bg-elev-3: #3a3a3c;
+    --separator: rgba(84, 84, 88, 0.6);
+    --separator-thin: rgba(84, 84, 88, 0.35);
+    --fill: rgba(120, 120, 128, 0.16);
+    --fill-2: rgba(120, 120, 128, 0.24);
+    --text: #fff;
+    --text-2: rgba(235, 235, 245, 0.6);
+    --text-3: rgba(235, 235, 245, 0.3);
+    --accent: #0a84ff;
+    --green: #30d158;
+    --red: #ff453a;
+    --orange: #ff9f0a;
+    --pink: #ff375f;
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
   html, body {
     margin: 0;
     padding: 0;
-    min-height: 100vh;
     background: var(--bg);
     color: var(--text);
-    font-family: "Inter", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic Medium", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    font-size: 17px;
+    line-height: 1.35;
   }
 
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(600px 400px at 10% -10%, rgba(124, 92, 255, 0.22), transparent 60%),
-      radial-gradient(500px 400px at 110% 20%, rgba(56, 189, 248, 0.16), transparent 60%),
-      radial-gradient(500px 400px at 50% 110%, rgba(244, 114, 182, 0.12), transparent 60%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .app {
-    position: relative;
-    z-index: 1;
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 28px 20px calc(32px + env(safe-area-inset-bottom));
-  }
-
-  .label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--muted);
-    font-weight: 600;
-    margin-bottom: 10px;
-  }
-
-  .section + .section { margin-top: 28px; }
-
-  /* Person picker */
-  .persons {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
-
-  .person {
-    position: relative;
-    cursor: pointer;
-    background: var(--soft);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px 6px;
-    text-align: center;
-    user-select: none;
-    transition: transform 0.12s ease, background 0.18s;
-  }
-
-  .person:active { transform: scale(0.97); }
-  .person input { position: absolute; opacity: 0; pointer-events: none; }
-  .person .emoji { font-size: 26px; line-height: 1; display: block; margin-bottom: 6px; }
-  .person .name { font-size: 13px; font-weight: 600; }
-
-  .person[data-id="funjin"][data-active="true"] { border-color: transparent; background: linear-gradient(135deg, rgba(255, 122, 89, 0.35), rgba(239, 68, 68, 0.2)); box-shadow: 0 8px 24px -12px rgba(255, 122, 89, 0.7); }
-  .person[data-id="pants"][data-active="true"]  { border-color: transparent; background: linear-gradient(135deg, rgba(244, 114, 182, 0.35), rgba(236, 72, 153, 0.2)); box-shadow: 0 8px 24px -12px rgba(244, 114, 182, 0.7); }
-  .person[data-id="jaga"][data-active="true"]   { border-color: transparent; background: linear-gradient(135deg, rgba(250, 204, 21, 0.35), rgba(245, 158, 11, 0.2)); box-shadow: 0 8px 24px -12px rgba(250, 204, 21, 0.7); }
-
-  /* Beneficiary toggles */
-  .beneficiaries {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-top: 10px;
-  }
-
-  .bene {
-    position: relative;
-    cursor: pointer;
-    background: var(--soft);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 10px 6px;
-    text-align: center;
-    user-select: none;
-    transition: transform 0.12s ease, opacity 0.18s, background 0.18s;
-  }
-
-  .bene:active { transform: scale(0.97); }
-  .bene input { position: absolute; opacity: 0; pointer-events: none; }
-  .bene .emoji { font-size: 20px; line-height: 1; display: block; margin-bottom: 2px; }
-  .bene .name { font-size: 12px; font-weight: 600; color: var(--muted); }
-  .bene[data-active="true"] {
-    background: rgba(124, 92, 255, 0.14);
-    border-color: rgba(124, 92, 255, 0.45);
-  }
-  .bene[data-active="true"] .name { color: var(--text); }
-  .bene[data-active="false"] { opacity: 0.35; }
-  .bene[data-active="false"] .emoji { filter: grayscale(0.8); }
-
-  .section-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-
-  .section-head .label { margin-bottom: 0; }
-
-  .hint {
-    font-size: 11px;
-    color: var(--muted);
-    font-weight: 500;
-  }
-
-  /* Input row */
-  .inputs {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-  }
-
-  input[type="text"], input[type="number"] {
-    width: 100%;
-    background: var(--soft);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 14px 14px;
-    color: var(--text);
-    font-size: 16px;
-    font-family: inherit;
-    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
-  }
-
-  input[type="number"] { font-variant-numeric: tabular-nums; font-weight: 700; }
-  input::placeholder { color: rgba(255, 255, 255, 0.25); }
-
-  input:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: rgba(124, 92, 255, 0.08);
-    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.15);
+  body {
+    min-height: 100vh;
+    padding-top: env(safe-area-inset-top);
   }
 
   button {
     font-family: inherit;
     cursor: pointer;
     border: none;
+    background: none;
+    color: inherit;
   }
 
-  .add-btn {
-    width: 100%;
-    margin-top: 10px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    color: white;
-    font-weight: 700;
+  input {
+    font-family: inherit;
+  }
+
+  .app {
+    max-width: 520px;
+    margin: 0 auto;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+
+  /* Navigation bar */
+  .nav-bar {
+    padding: 8px 20px 4px;
+    position: relative;
+  }
+
+  .nav-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+  }
+
+  .sync-badge {
+    font-size: 12px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.25s;
+  }
+  .sync-badge[data-status="syncing"] { color: var(--accent); }
+  .sync-badge[data-status="offline"] { color: var(--orange); }
+  .sync-badge[data-status="idle"] { color: var(--green); }
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--fill);
+    color: var(--accent);
     font-size: 15px;
-    padding: 14px;
-    border-radius: 12px;
-    transition: transform 0.1s ease, box-shadow 0.2s;
-    box-shadow: 0 10px 24px -12px rgba(124, 92, 255, 0.8);
+    font-weight: 600;
+    display: grid;
+    place-items: center;
+    transition: transform 0.1s, background 0.18s;
+  }
+  .icon-btn:active { transform: scale(0.92); background: var(--fill-2); }
+
+  .large-title {
+    margin: 6px 0 6px;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
   }
 
-  .add-btn:active { transform: scale(0.98); }
-  .add-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  .room-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px 6px 8px;
+    margin-left: -8px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-2);
+    background: transparent;
+    transition: background 0.15s;
+  }
+  .room-switcher .home { font-size: 14px; }
+  .room-switcher .caret { font-size: 9px; color: var(--text-3); margin-top: 2px; }
+  .room-switcher:active { background: var(--fill); color: var(--text); }
 
-  /* Entries */
+  /* Grouped section */
+  .group {
+    margin: 16px 16px 24px;
+  }
+
+  .group-header {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-2);
+    padding: 0 16px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .group-header .action {
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 4px 8px;
+    margin: -4px -8px -4px 0;
+    border-radius: 6px;
+    font-weight: 400;
+  }
+  .group-header .action:active { background: var(--fill); }
+
+  .card {
+    background: var(--bg-elev-1);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  /* Summary card */
+  .total-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 16px 16px 14px;
+  }
+  .total-row .label-k { font-size: 15px; color: var(--text-2); }
+  .total-row .label-v {
+    font-size: 28px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .person-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 16px;
+  }
+  .person-row + .person-row {
+    border-top: 0.5px solid var(--separator);
+  }
+  .summary-card .person-row:first-of-type {
+    border-top: 0.5px solid var(--separator);
+  }
+
+  .avatar-emoji {
+    font-size: 24px;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+  }
+  .person-row .pname {
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .person-row .paid {
+    font-size: 13px;
+    color: var(--text-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .person-row .bal {
+    font-size: 17px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 90px;
+    text-align: right;
+  }
+
+  /* Settlement card */
+  .settle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+  }
+  .settle-row + .settle-row { border-top: 0.5px solid var(--separator); }
+  .settle-row .text {
+    font-size: 17px;
+    font-weight: 500;
+  }
+  .settle-row .arrow {
+    color: var(--text-3);
+    margin: 0 6px;
+    font-weight: 400;
+  }
+  .settle-row .amt {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--green);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .settled-msg {
+    text-align: center;
+    padding: 18px 16px;
+    color: var(--text-2);
+    font-size: 15px;
+  }
+
+  /* History list */
   .entries {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: flex;
-    flex-direction: column;
   }
 
-  .entry-item {
+  .entry-row {
     display: grid;
-    grid-template-columns: auto 1fr auto auto;
-    align-items: center;
+    grid-template-columns: 36px 1fr auto auto;
     gap: 12px;
-    padding: 12px 4px;
-    border-bottom: 1px solid var(--line);
-    animation: slideIn 0.22s ease;
-  }
-
-  .entry-meta {
-    display: flex;
     align-items: center;
-    gap: 4px;
-    margin-top: 2px;
+    padding: 12px 16px;
+    min-height: 56px;
+    animation: fadeSlide 0.22s ease;
   }
-
-  .entry-meta .mini {
-    width: 16px;
-    height: 16px;
-    border-radius: 5px;
-    display: grid;
-    place-items: center;
-    font-size: 10px;
+  .entry-row + .entry-row {
+    border-top: 0.5px solid var(--separator);
   }
-
-  .entry-meta .dot {
-    color: var(--muted);
-    font-size: 11px;
-    margin: 0 2px;
-  }
-
-  .entry-meta .note-text {
-    font-size: 12px;
-    color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-left: 4px;
-  }
-
-  .entry-item:last-child { border-bottom: none; }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateY(-4px); }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(-2px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
-  .avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
+  .entry-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .entry-name {
     font-size: 17px;
-    flex-shrink: 0;
+    font-weight: 500;
   }
-
-  .avatar[data-id="funjin"] { background: linear-gradient(135deg, #ff7a59, #ef4444); }
-  .avatar[data-id="pants"]  { background: linear-gradient(135deg, #f472b6, #ec4899); }
-  .avatar[data-id="jaga"]   { background: linear-gradient(135deg, #facc15, #f59e0b); }
-
-  /* Plain emoji avatars (no background) in history, breakdown, and settlements */
-  .entries .avatar,
-  .breakdown .avatar,
-  .settlement .avatar {
-    background: none !important;
-    width: 30px;
-    height: 30px;
-    font-size: 22px;
-  }
-  .entries .mini.avatar {
-    width: 16px;
-    height: 16px;
+  .entry-meta-line {
     font-size: 13px;
+    color: var(--text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
+  .entry-meta-line .mini { font-size: 13px; }
+  .entry-meta-line .sep { color: var(--text-3); margin: 0 2px; }
 
-  .entry-info { display: flex; flex-direction: column; min-width: 0; }
-  .entry-name { font-size: 14px; font-weight: 600; }
-  .entry-note { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .entry-amount { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+  .entry-amount {
+    font-size: 17px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
 
   .delete-btn {
-    background: transparent;
-    color: var(--muted);
-    font-size: 20px;
     width: 28px;
     height: 28px;
-    border-radius: 8px;
-    display: grid;
-    place-items: center;
-    transition: all 0.15s;
-  }
-
-  .delete-btn:active { background: rgba(239, 68, 68, 0.18); color: var(--danger); }
-
-  .empty {
-    text-align: center;
-    color: var(--muted);
-    font-size: 13px;
-    padding: 24px 0;
-  }
-
-  /* Summary */
-  .grand {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 8px 0 14px;
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 14px;
-  }
-
-  .grand .k { font-size: 13px; color: var(--muted); font-weight: 500; }
-  .grand .v {
-    font-size: 26px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-    background: linear-gradient(135deg, #a78bfa, #38bdf8);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  .breakdown {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 4px;
-  }
-
-  .bd-row {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 0;
-    font-size: 14px;
-  }
-
-  .bd-row .n { font-weight: 600; }
-  .bd-row .a { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--muted); }
-
-  .settlements {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .settlement {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 10px 2px;
-    animation: slideIn 0.28s ease;
-  }
-
-  .settlement + .settlement {
-    border-top: 1px solid var(--line);
-  }
-
-  .settlement .text {
-    font-size: 15px;
-    color: var(--text);
-    font-weight: 600;
-  }
-
-  .settlement .text .arrow {
-    color: var(--muted);
-    font-weight: 500;
-    margin: 0 6px;
-  }
-
-  .settlement .amt {
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .settled {
-    text-align: center;
-    padding: 16px 0;
-    color: var(--muted);
-    font-weight: 500;
-    font-size: 14px;
-  }
-
-  .clear-btn {
-    background: transparent;
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    padding: 0;
-    transition: color 0.15s;
-  }
-
-  .clear-btn:active { color: var(--danger); }
-
-  /* Top bar */
-  .top-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-bottom: 24px;
-  }
-
-  /* Room bar */
-  .room-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: var(--soft);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    cursor: pointer;
-    max-width: 100%;
-    transition: background 0.15s, transform 0.1s;
-  }
-
-  .room-bar:active { transform: scale(0.97); }
-
-  .share-btn {
-    width: 36px;
-    height: 36px;
     border-radius: 50%;
-    background: var(--soft);
-    border: 1px solid var(--line);
-    color: var(--text);
-    font-size: 16px;
+    color: var(--text-3);
+    font-size: 20px;
+    line-height: 1;
     display: grid;
     place-items: center;
-    transition: transform 0.1s, background 0.15s;
+    transition: background 0.18s, color 0.18s;
   }
-  .share-btn:active { transform: scale(0.95); background: rgba(124, 92, 255, 0.18); }
+  .delete-btn:active {
+    background: rgba(255, 69, 58, 0.2);
+    color: var(--red);
+  }
 
-  .sync-badge {
-    font-size: 11px;
-    color: var(--muted);
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--line);
-    font-variant-numeric: tabular-nums;
-    transition: color 0.2s, background 0.2s, border-color 0.2s;
-    flex-basis: 100%;
+  .empty-state {
     text-align: center;
-    margin-top: 4px;
+    color: var(--text-3);
+    font-size: 15px;
+    padding: 32px 16px;
   }
-  .sync-badge[data-status="syncing"] { color: var(--accent-2); border-color: rgba(56, 189, 248, 0.3); }
-  .sync-badge[data-status="offline"] { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
-  .sync-badge[data-status="idle"]    { color: #4ade80; border-color: rgba(74, 222, 128, 0.25); }
-  .sync-badge[data-status="conflict"]{ color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
 
-  @media (min-width: 420px) {
-    .sync-badge { flex-basis: auto; margin-top: 0; }
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    background: var(--accent);
+    color: white;
+    font-size: 30px;
+    font-weight: 300;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 8px 24px rgba(10, 132, 255, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+    z-index: 40;
   }
-  .room-bar .home { font-size: 15px; line-height: 1; }
-  .room-bar .name { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .room-bar .caret { color: var(--muted); font-size: 10px; }
+  .fab:active {
+    transform: translateX(-50%) scale(0.92);
+    box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3), 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
 
-  /* Room sheet */
+  @media (min-width: 520px) {
+    .fab { left: auto; right: max(20px, calc(50vw - 240px)); transform: none; }
+    .fab:active { transform: scale(0.92); }
+  }
+
+  /* Sheets (room / entry) */
   dialog.sheet {
     border: none;
     background: transparent;
     padding: 0;
     margin: 0;
-    max-width: none;
-    max-height: none;
     width: 100%;
     height: 100%;
+    max-width: none;
+    max-height: none;
     color: var(--text);
   }
-
   dialog.sheet::backdrop {
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
-
   .sheet-inner {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    max-width: 480px;
+    max-width: 520px;
     margin: 0 auto;
-    padding: 22px 20px calc(28px + env(safe-area-inset-bottom));
-    background: #14192a;
-    border-top: 1px solid var(--line);
-    border-radius: 22px 22px 0 0;
-    animation: slideUp 0.24s ease;
+    background: var(--bg-elev-1);
+    border-radius: 14px 14px 0 0;
+    padding: 8px 0 calc(16px + env(safe-area-inset-bottom));
+    animation: slideUp 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    max-height: 92vh;
+    overflow-y: auto;
   }
-
   @keyframes slideUp {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
   }
+  .handle {
+    width: 36px;
+    height: 5px;
+    border-radius: 2.5px;
+    background: var(--bg-elev-3);
+    margin: 6px auto 4px;
+  }
 
   .sheet-head {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 8px 16px 12px;
+    gap: 8px;
+  }
+  .sheet-head .title {
+    text-align: center;
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .sheet-head .left, .sheet-head .right {
+    display: flex;
+  }
+  .sheet-head .left { justify-content: flex-start; }
+  .sheet-head .right { justify-content: flex-end; }
+  .sheet-head button {
+    color: var(--accent);
+    font-size: 17px;
+    padding: 6px 4px;
+    border-radius: 8px;
+  }
+  .sheet-head button.bold { font-weight: 600; }
+  .sheet-head button:active { background: var(--fill); }
+  .sheet-head button:disabled { color: var(--text-3); }
+
+  .sheet-body { padding: 0 16px; }
+
+  /* Entry sheet form */
+  .field-label {
+    font-size: 13px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 16px 0 8px;
+    padding-left: 4px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .field-label .hint {
+    color: var(--text-3);
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+
+  /* Segmented control (payer) */
+  .segmented {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    background: var(--fill);
+    border-radius: 9px;
+    padding: 2px;
+    position: relative;
+  }
+  .seg-item {
+    position: relative;
+    text-align: center;
+    padding: 10px 6px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    user-select: none;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
+    justify-content: center;
+    gap: 4px;
   }
-
-  .sheet-head .title { font-size: 16px; font-weight: 700; }
-  .sheet-head .close {
-    background: transparent;
-    color: var(--muted);
-    font-size: 22px;
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
+  .seg-item input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg-item .emoji { font-size: 17px; line-height: 1; }
+  .seg-item[data-active="true"] {
+    background: var(--bg-elev-2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+  /* Chips (beneficiaries) */
+  .chips {
     display: grid;
-    place-items: center;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .chip {
+    position: relative;
+    background: var(--fill);
+    padding: 12px 8px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.18s, opacity 0.18s, color 0.18s;
+    user-select: none;
+  }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+  .chip .emoji { font-size: 17px; line-height: 1; }
+  .chip[data-active="false"] { opacity: 0.4; }
+  .chip[data-active="true"] {
+    background: rgba(10, 132, 255, 0.18);
+    color: #5ac8fa;
   }
 
-  .room-list { display: flex; flex-direction: column; }
+  /* Amount field */
+  .amount-field {
+    background: var(--bg-elev-2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    height: 56px;
+  }
+  .amount-field .yen {
+    font-size: 22px;
+    color: var(--text-2);
+    margin-right: 4px;
+    font-weight: 400;
+  }
+  .amount-field input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 28px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+    padding: 0;
+  }
+  .amount-field input::placeholder { color: var(--text-3); font-weight: 400; }
 
+  /* Note field */
+  .note-field {
+    background: var(--bg-elev-2);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .note-field input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 17px;
+    outline: none;
+  }
+  .note-field input::placeholder { color: var(--text-3); }
+
+  /* Room sheet */
+  .room-list {
+    background: var(--bg-elev-2);
+    border-radius: 10px;
+    overflow: hidden;
+  }
   .room-row {
     display: grid;
     grid-template-columns: 1fr auto auto;
     align-items: center;
-    gap: 4px;
-    border-bottom: 1px solid var(--line);
   }
-
-  .room-row:last-child { border-bottom: none; }
-
+  .room-row + .room-row { border-top: 0.5px solid var(--separator); }
   .room-pick {
     background: transparent;
-    color: var(--text);
     text-align: left;
-    padding: 14px 4px;
-    font-size: 15px;
-    font-weight: 600;
+    padding: 14px 16px;
+    font-size: 17px;
+    color: var(--text);
     display: flex;
     align-items: center;
     gap: 10px;
-    width: 100%;
     min-width: 0;
+    width: 100%;
   }
-
-  .room-pick .dot { color: var(--muted); font-size: 14px; width: 14px; text-align: center; }
-  .room-row[data-current="true"] .room-pick .dot { color: var(--accent-2); }
-  .room-pick .rn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-  .room-edit, .room-del {
-    background: transparent;
-    color: var(--muted);
+  .room-pick .dot {
+    width: 16px;
     font-size: 16px;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    color: transparent;
+    flex-shrink: 0;
+  }
+  .room-row[data-current="true"] .room-pick .dot::before {
+    content: "✓";
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .room-pick .rn {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .room-edit, .room-del {
+    width: 44px;
+    height: 44px;
+    color: var(--accent);
+    font-size: 17px;
     display: grid;
     place-items: center;
-    transition: color 0.15s, background 0.15s;
   }
-  .room-edit:active { color: var(--accent-2); }
-  .room-del:active { color: var(--danger); background: rgba(239, 68, 68, 0.12); }
+  .room-del { color: var(--red); }
+  .room-edit:active, .room-del:active { background: var(--fill); }
 
   .room-create {
     width: 100%;
-    margin-top: 12px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    background: var(--accent);
     color: white;
-    font-weight: 700;
-    font-size: 14px;
-    padding: 13px;
-    border-radius: 12px;
-    transition: transform 0.1s ease;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    margin-top: 14px;
+    transition: opacity 0.15s;
   }
-  .room-create:active { transform: scale(0.98); }
+  .room-create:active { opacity: 0.7; }
 
-  /* Name dialog (rename / create) */
+  /* Name dialog (iOS alert style) */
   dialog.name-dialog {
     border: none;
-    padding: 0;
     background: transparent;
+    padding: 0;
+    margin: auto;
+    max-width: 280px;
+    width: calc(100% - 64px);
     color: var(--text);
-    max-width: 380px;
-    width: calc(100% - 40px);
   }
-
   dialog.name-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
-
   .nd-form {
-    background: #14192a;
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    padding: 22px 20px 20px;
-    animation: popIn 0.18s ease;
+    background: rgba(50, 50, 56, 0.92);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border-radius: 14px;
+    overflow: hidden;
+    animation: popIn 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+    text-align: center;
   }
-
   @keyframes popIn {
-    from { opacity: 0; transform: scale(0.95); }
+    from { opacity: 0; transform: scale(0.85); }
     to { opacity: 1; transform: scale(1); }
   }
-
   .nd-title {
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 14px;
+    font-size: 17px;
+    font-weight: 600;
+    padding: 20px 16px 6px;
   }
-
   .nd-form input {
-    width: 100%;
-    background: var(--soft);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 14px;
+    width: calc(100% - 24px);
+    margin: 14px 12px 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 0.5px solid var(--separator);
+    border-radius: 6px;
+    padding: 8px 10px;
     color: var(--text);
-    font-size: 16px;
-    font-family: inherit;
-    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    font-size: 15px;
+    text-align: left;
   }
-
-  .nd-form input:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: rgba(124, 92, 255, 0.08);
-    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.15);
-  }
-
   .nd-counter {
-    text-align: right;
     font-size: 11px;
-    color: var(--muted);
-    margin-top: 6px;
+    color: var(--text-3);
+    padding: 4px 12px 14px;
+    text-align: right;
     font-variant-numeric: tabular-nums;
   }
-
   .nd-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 16px;
+    border-top: 0.5px solid var(--separator);
   }
-
   .nd-cancel, .nd-ok {
-    padding: 12px;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 14px;
-    font-family: inherit;
-    transition: transform 0.1s ease;
-  }
-
-  .nd-cancel {
     background: transparent;
-    color: var(--text);
-    border: 1px solid var(--line);
+    padding: 12px;
+    font-size: 17px;
+    color: var(--accent);
+    transition: background 0.15s;
   }
-
-  .nd-ok {
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    color: white;
-    border: none;
-  }
-
-  .nd-ok:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .nd-cancel:active { background: rgba(255, 255, 255, 0.05); }
-  .nd-ok:active:not(:disabled) { transform: scale(0.98); }
+  .nd-ok { font-weight: 600; }
+  .nd-cancel { border-right: 0.5px solid var(--separator); }
+  .nd-cancel:active, .nd-ok:active:not(:disabled) { background: rgba(255, 255, 255, 0.06); }
+  .nd-ok:disabled { color: var(--text-3); }
 </style>
 </head>
 <body>
   <div class="app">
-    <div class="top-bar">
-      <button class="room-bar" id="room-bar" type="button" aria-haspopup="dialog">
+    <header class="nav-bar">
+      <div class="nav-top">
+        <span class="sync-badge" id="sync-badge" data-status="idle">✓ 同期済み</span>
+        <button class="icon-btn" id="share-btn" type="button" aria-label="共有URLをコピー">↗</button>
+      </div>
+      <h1 class="large-title">割り勘</h1>
+      <button class="room-switcher" id="room-bar" type="button" aria-haspopup="dialog">
         <span class="home">🏠</span>
-        <span class="name" id="room-bar-name">部屋</span>
+        <span class="rn" id="room-bar-name">部屋</span>
         <span class="caret">▼</span>
       </button>
-      <button class="share-btn" id="share-btn" type="button" aria-label="共有URLをコピー">↗</button>
-      <span class="sync-badge" id="sync-badge" data-status="idle">✓ 同期済み</span>
-    </div>
+    </header>
 
-    <dialog class="sheet" id="room-sheet" aria-label="部屋の切り替え">
-      <div class="sheet-inner">
-        <div class="sheet-head">
-          <span class="title">部屋</span>
-          <button class="close" id="room-sheet-close" aria-label="閉じる" type="button">×</button>
+    <section class="group" id="summary-group" style="display:none;">
+      <div class="group-header">集計</div>
+      <div class="card summary-card">
+        <div class="total-row">
+          <span class="label-k">合計</span>
+          <span class="label-v" id="grand-total">¥0</span>
         </div>
+        <div id="breakdown"></div>
+      </div>
+    </section>
+
+    <section class="group" id="settle-group" style="display:none;">
+      <div class="group-header">精算</div>
+      <div class="card" id="settlements"></div>
+    </section>
+
+    <section class="group">
+      <div class="group-header">
+        <span>履歴</span>
+        <button class="action" id="reset-btn" type="button">全削除</button>
+      </div>
+      <div class="card">
+        <ul class="entries" id="entries-list"></ul>
+        <div class="empty-state" id="empty-state">まだ何も登録されていません</div>
+      </div>
+    </section>
+  </div>
+
+  <button class="fab" id="fab" type="button" aria-label="新規追加">+</button>
+
+  <dialog class="sheet" id="entry-sheet" aria-label="新規追加">
+    <div class="sheet-inner">
+      <div class="handle"></div>
+      <div class="sheet-head">
+        <div class="left"><button type="button" id="es-cancel">キャンセル</button></div>
+        <div class="title">新規追加</div>
+        <div class="right"><button type="submit" form="entry-form" class="bold" id="es-done">追加</button></div>
+      </div>
+      <form class="sheet-body" id="entry-form" autocomplete="off">
+        <div class="field-label">支払者</div>
+        <div class="segmented" id="person-picker">
+          <label class="seg-item" data-id="funjin">
+            <input type="radio" name="person" value="funjin" />
+            <span class="emoji">💥</span>粉塵爆発
+          </label>
+          <label class="seg-item" data-id="pants">
+            <input type="radio" name="person" value="pants" />
+            <span class="emoji">🩲</span>ぱんつ
+          </label>
+          <label class="seg-item" data-id="jaga">
+            <input type="radio" name="person" value="jaga" />
+            <span class="emoji">🥔</span>じゃが
+          </label>
+        </div>
+
+        <div class="field-label">
+          <span>対象者</span>
+          <span class="hint" id="bene-hint">全員</span>
+        </div>
+        <div class="chips" id="bene-picker">
+          <label class="chip" data-id="funjin" data-active="true">
+            <input type="checkbox" name="bene" value="funjin" checked />
+            <span class="emoji">💥</span>粉塵爆発
+          </label>
+          <label class="chip" data-id="pants" data-active="true">
+            <input type="checkbox" name="bene" value="pants" checked />
+            <span class="emoji">🩲</span>ぱんつ
+          </label>
+          <label class="chip" data-id="jaga" data-active="true">
+            <input type="checkbox" name="bene" value="jaga" checked />
+            <span class="emoji">🥔</span>じゃが
+          </label>
+        </div>
+
+        <div class="field-label">金額</div>
+        <div class="amount-field">
+          <span class="yen">¥</span>
+          <input type="number" id="amount" min="1" step="1" inputmode="numeric" placeholder="0" required />
+        </div>
+
+        <div class="field-label">メモ (任意)</div>
+        <div class="note-field">
+          <input type="text" id="note" maxlength="60" placeholder="例: ランチ、コンビニ" />
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="sheet" id="room-sheet" aria-label="部屋の切り替え">
+    <div class="sheet-inner">
+      <div class="handle"></div>
+      <div class="sheet-head">
+        <div class="left"></div>
+        <div class="title">部屋</div>
+        <div class="right"><button type="button" id="room-sheet-close">閉じる</button></div>
+      </div>
+      <div class="sheet-body">
         <div class="room-list" id="room-list"></div>
         <button class="room-create" id="room-create" type="button">＋ 新しい部屋</button>
       </div>
-    </dialog>
+    </div>
+  </dialog>
 
-    <dialog class="name-dialog" id="name-dialog" aria-labelledby="nd-title">
-      <form class="nd-form" id="nd-form">
-        <div class="nd-title" id="nd-title">部屋の名前</div>
-        <input type="text" id="nd-input" maxlength="30" autocomplete="off" placeholder="例: 旅行2026春" />
-        <div class="nd-counter"><span id="nd-count">0</span> / 30</div>
-        <div class="nd-actions">
-          <button type="button" class="nd-cancel" id="nd-cancel">キャンセル</button>
-          <button type="submit" class="nd-ok" id="nd-ok" disabled>決定</button>
-        </div>
-      </form>
-    </dialog>
-
-    <form class="section" id="entry-form" autocomplete="off">
-      <div class="label">誰が払った？</div>
-      <div class="persons" id="person-picker">
-        <label class="person" data-id="funjin">
-          <input type="radio" name="person" value="funjin" />
-          <span class="emoji">💥</span>
-          <span class="name">粉塵爆発</span>
-        </label>
-        <label class="person" data-id="pants">
-          <input type="radio" name="person" value="pants" />
-          <span class="emoji">🩲</span>
-          <span class="name">ぱんつ</span>
-        </label>
-        <label class="person" data-id="jaga">
-          <input type="radio" name="person" value="jaga" />
-          <span class="emoji">🥔</span>
-          <span class="name">じゃが</span>
-        </label>
+  <dialog class="name-dialog" id="name-dialog" aria-labelledby="nd-title">
+    <form class="nd-form" id="nd-form">
+      <div class="nd-title" id="nd-title">部屋の名前</div>
+      <input type="text" id="nd-input" maxlength="30" autocomplete="off" placeholder="例: 旅行2026春" />
+      <div class="nd-counter"><span id="nd-count">0</span> / 30</div>
+      <div class="nd-actions">
+        <button type="button" class="nd-cancel" id="nd-cancel">キャンセル</button>
+        <button type="submit" class="nd-ok" id="nd-ok" disabled>決定</button>
       </div>
-
-      <div class="section-head" style="margin-top: 18px;">
-        <div class="label">誰の分？</div>
-        <span class="hint" id="bene-hint">全員</span>
-      </div>
-      <div class="beneficiaries" id="bene-picker">
-        <label class="bene" data-id="funjin" data-active="true">
-          <input type="checkbox" name="bene" value="funjin" checked />
-          <span class="emoji">💥</span>
-          <span class="name">粉塵爆発</span>
-        </label>
-        <label class="bene" data-id="pants" data-active="true">
-          <input type="checkbox" name="bene" value="pants" checked />
-          <span class="emoji">🩲</span>
-          <span class="name">ぱんつ</span>
-        </label>
-        <label class="bene" data-id="jaga" data-active="true">
-          <input type="checkbox" name="bene" value="jaga" checked />
-          <span class="emoji">🥔</span>
-          <span class="name">じゃが</span>
-        </label>
-      </div>
-
-      <div class="inputs">
-        <input type="number" id="amount" min="1" step="1" inputmode="numeric" placeholder="金額 ¥" required />
-        <input type="text" id="note" placeholder="メモ (任意)" maxlength="60" />
-      </div>
-
-      <button type="submit" class="add-btn">追加する</button>
     </form>
-
-    <section class="section">
-      <div class="section-head">
-        <div class="label">履歴</div>
-        <button class="clear-btn" id="reset-btn" type="button">全削除</button>
-      </div>
-      <ul class="entries" id="entries-list"></ul>
-      <div class="empty" id="empty-state">まだ何も登録されていません</div>
-    </section>
-
-    <section class="section" id="summary-section" style="display:none;">
-      <div class="label">集計</div>
-
-      <div class="grand">
-        <span class="k">合計</span>
-        <span class="v" id="grand-total">¥0</span>
-      </div>
-
-      <div class="breakdown" id="breakdown"></div>
-    </section>
-
-    <section class="section" id="settle-section" style="display:none;">
-      <div class="label">精算</div>
-      <div class="settlements" id="settlements"></div>
-    </section>
-
-  </div>
+  </dialog>
 
 <script>
   const PEOPLE = [
@@ -855,7 +870,7 @@
     return { status: 200, data: await res.json() };
   };
 
-  let syncStatus = "idle"; // idle | syncing | offline | conflict
+  let syncStatus = "idle";
   const updateSyncBadge = () => {
     const el = document.getElementById("sync-badge");
     if (!el) return;
@@ -1072,9 +1087,16 @@
     }
   };
 
-  const sheet = document.getElementById("room-sheet");
+  const escapeHtml = (s) => s.replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+
+  const roomSheet = document.getElementById("room-sheet");
   const roomBarBtn = document.getElementById("room-bar");
   const roomListEl = document.getElementById("room-list");
+
+  const entrySheet = document.getElementById("entry-sheet");
+  const fab = document.getElementById("fab");
 
   const nameDialog = document.getElementById("name-dialog");
   const nameForm = document.getElementById("nd-form");
@@ -1106,8 +1128,7 @@
       nameOk.disabled = defaultValue.trim().length === 0;
 
       nameInput.oninput = () => {
-        const len = nameInput.value.length;
-        nameCount.textContent = String(len);
+        nameCount.textContent = String(nameInput.value.length);
         nameOk.disabled = nameInput.value.trim().length === 0;
       };
       nameForm.onsubmit = (e) => {
@@ -1136,22 +1157,22 @@
     roomListEl.innerHTML = rooms.map(r => `
       <div class="room-row" data-current="${r.id === currentRoomId}">
         <button class="room-pick" data-id="${r.id}" type="button">
-          <span class="dot">${r.id === currentRoomId ? "●" : "○"}</span>
+          <span class="dot"></span>
           <span class="rn">${escapeHtml(r.name)}</span>
         </button>
         <button class="room-edit" data-id="${r.id}" type="button" aria-label="名前変更">✎</button>
-        <button class="room-del" data-id="${r.id}" type="button" aria-label="削除">×</button>
+        <button class="room-del" data-id="${r.id}" type="button" aria-label="削除">⊖</button>
       </div>
     `).join("");
   };
 
   roomBarBtn.addEventListener("click", () => {
     renderRoomList();
-    sheet.showModal();
+    roomSheet.showModal();
   });
-  document.getElementById("room-sheet-close").addEventListener("click", () => sheet.close());
-  sheet.addEventListener("click", (e) => {
-    if (e.target === sheet) sheet.close();
+  document.getElementById("room-sheet-close").addEventListener("click", () => roomSheet.close());
+  roomSheet.addEventListener("click", (e) => {
+    if (e.target === roomSheet) roomSheet.close();
   });
   document.getElementById("room-create").addEventListener("click", async () => {
     const name = await askName({
@@ -1161,7 +1182,7 @@
     });
     if (!name) return;
     createRoom(name);
-    sheet.close();
+    roomSheet.close();
   });
   roomListEl.addEventListener("click", async (e) => {
     const pick = e.target.closest(".room-pick");
@@ -1169,7 +1190,7 @@
     const del = e.target.closest(".room-del");
     if (pick) {
       setCurrentRoom(pick.dataset.id);
-      sheet.close();
+      roomSheet.close();
     } else if (edit) {
       const cur = rooms.find(r => r.id === edit.dataset.id);
       const next = await askName({
@@ -1202,9 +1223,10 @@
   const picker = document.getElementById("person-picker");
   picker.addEventListener("change", () => {
     const selected = picker.querySelector('input[name="person"]:checked')?.value;
-    picker.querySelectorAll(".person").forEach(el => {
+    picker.querySelectorAll("label[data-id]").forEach(el => {
       el.dataset.active = String(el.dataset.id === selected);
     });
+    updateDoneState();
   });
 
   const benePicker = document.getElementById("bene-picker");
@@ -1213,13 +1235,14 @@
   const updateBeneUI = () => {
     const checked = [];
     benePicker.querySelectorAll('input[name="bene"]').forEach(el => {
-      const label = el.closest(".bene");
+      const label = el.closest("label[data-id]");
       label.dataset.active = String(el.checked);
       if (el.checked) checked.push(el.value);
     });
     if (checked.length === 3) beneHint.textContent = "全員";
     else if (checked.length === 0) beneHint.textContent = "未選択";
     else beneHint.textContent = checked.map(id => byId(id).name).join(" / ");
+    updateDoneState();
   };
 
   benePicker.addEventListener("change", updateBeneUI);
@@ -1228,6 +1251,42 @@
   const form = document.getElementById("entry-form");
   const amountInput = document.getElementById("amount");
   const noteInput = document.getElementById("note");
+  const doneBtn = document.getElementById("es-done");
+
+  const updateDoneState = () => {
+    const person = picker.querySelector('input[name="person"]:checked')?.value;
+    const amount = Number(amountInput.value);
+    const beneCount = benePicker.querySelectorAll('input[name="bene"]:checked').length;
+    doneBtn.disabled = !(person && Number.isFinite(amount) && amount > 0 && beneCount > 0);
+  };
+
+  amountInput.addEventListener("input", updateDoneState);
+
+  const resetEntryForm = () => {
+    picker.querySelectorAll('input[name="person"]').forEach(el => { el.checked = false; });
+    picker.querySelectorAll("label[data-id]").forEach(el => { el.dataset.active = "false"; });
+    benePicker.querySelectorAll('input[name="bene"]').forEach(el => { el.checked = true; });
+    updateBeneUI();
+    amountInput.value = "";
+    noteInput.value = "";
+    updateDoneState();
+  };
+
+  fab.addEventListener("click", () => {
+    entrySheet.showModal();
+    requestAnimationFrame(() => picker.querySelector('input[name="person"]')?.focus({ preventScroll: true }));
+  });
+
+  document.getElementById("es-cancel").addEventListener("click", () => {
+    entrySheet.close();
+    resetEntryForm();
+  });
+  entrySheet.addEventListener("click", (e) => {
+    if (e.target === entrySheet) { entrySheet.close(); resetEntryForm(); }
+  });
+  entrySheet.addEventListener("cancel", () => {
+    resetEntryForm();
+  });
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -1238,9 +1297,9 @@
       benePicker.querySelectorAll('input[name="bene"]:checked')
     ).map(el => el.value);
 
-    if (!person) { alert("誰が払ったかを選んでください"); return; }
+    if (!person) return;
     if (!Number.isFinite(amount) || amount <= 0) return;
-    if (beneficiaries.length === 0) { alert("誰の分かを1人以上選んでください"); return; }
+    if (beneficiaries.length === 0) return;
 
     entries = [
       { id: crypto.randomUUID(), person, amount, note, beneficiaries, createdAt: Date.now() },
@@ -1250,9 +1309,8 @@
     render();
     schedulePush(currentRoomId);
 
-    amountInput.value = "";
-    noteInput.value = "";
-    amountInput.focus();
+    entrySheet.close();
+    resetEntryForm();
   });
 
   document.getElementById("reset-btn").addEventListener("click", () => {
@@ -1297,7 +1355,6 @@
     const list = PEOPLE.map(p => ({ id: p.id, balance: balances[p.id] || 0 }));
     const creditors = list.filter(b => b.balance > 0.5).sort((a, b) => b.balance - a.balance);
     const debtors   = list.filter(b => b.balance < -0.5).sort((a, b) => a.balance - b.balance);
-
     const results = [];
     let i = 0, j = 0;
     while (i < debtors.length && j < creditors.length) {
@@ -1314,10 +1371,6 @@
     return results;
   };
 
-  const escapeHtml = (s) => s.replace(/[&<>"']/g, c => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[c]));
-
   const renderEntries = () => {
     const list = document.getElementById("entries-list");
     const empty = document.getElementById("empty-state");
@@ -1332,25 +1385,26 @@
       if (!p) continue;
       const bene = beneOf(entry);
       const isAll = bene.length === PEOPLE.length;
-      const beneHTML = isAll ? "" : `
-        <div class="entry-meta">
-          <span class="dot">→</span>
-          ${bene.map(id => {
-            const b = byId(id);
-            return b ? `<div class="mini avatar" data-id="${b.id}">${b.emoji}</div>` : "";
-          }).join("")}
-          ${entry.note ? `<span class="note-text">${escapeHtml(entry.note)}</span>` : ""}
-        </div>`;
-      const noteInline = (isAll && entry.note)
-        ? `<span class="entry-note">${escapeHtml(entry.note)}</span>` : "";
+      const metaPieces = [];
+      if (!isAll) {
+        metaPieces.push(bene.map(id => {
+          const b = byId(id);
+          return b ? `<span class="mini">${b.emoji}</span>` : "";
+        }).join(""));
+      }
+      if (entry.note) {
+        metaPieces.push(`<span>${escapeHtml(entry.note)}</span>`);
+      }
+      const metaHTML = metaPieces.length > 0
+        ? `<div class="entry-meta-line">${metaPieces.join('<span class="sep">·</span>')}</div>`
+        : "";
       const li = document.createElement("li");
-      li.className = "entry-item";
+      li.className = "entry-row";
       li.innerHTML = `
-        <div class="avatar" data-id="${p.id}">${p.emoji}</div>
+        <div class="avatar-emoji">${p.emoji}</div>
         <div class="entry-info">
           <span class="entry-name">${p.name}</span>
-          ${noteInline}
-          ${beneHTML}
+          ${metaHTML}
         </div>
         <div class="entry-amount">${formatYen(entry.amount)}</div>
         <button class="delete-btn" data-id="${entry.id}" aria-label="削除" title="削除">×</button>
@@ -1360,8 +1414,8 @@
   };
 
   const renderSummary = () => {
-    const summary = document.getElementById("summary-section");
-    const settle = document.getElementById("settle-section");
+    const summary = document.getElementById("summary-group");
+    const settle = document.getElementById("settle-group");
 
     if (entries.length === 0) {
       summary.style.display = "none";
@@ -1383,38 +1437,37 @@
       const bal = Math.round(balances[p.id] || 0);
       const paid = totals[p.id] || 0;
       const sign = bal > 0 ? "+" : bal < 0 ? "−" : "±";
-      const color = bal > 0 ? "#4ade80" : bal < 0 ? "#f87171" : "var(--muted)";
+      const color = bal > 0 ? "var(--green)" : bal < 0 ? "var(--red)" : "var(--text-2)";
       return `
-        <div class="bd-row">
-          <div class="avatar" data-id="${p.id}">${p.emoji}</div>
-          <span class="n">${p.name}<span style="color: var(--muted); font-weight: 500; font-size: 12px; margin-left: 6px;">払${formatYen(paid)}</span></span>
-          <span class="a" style="color: ${color};">${sign}${formatYen(Math.abs(bal))}</span>
+        <div class="person-row">
+          <div class="avatar-emoji">${p.emoji}</div>
+          <span class="pname">${p.name}</span>
+          <span class="paid">払 ${formatYen(paid)}</span>
+          <span class="bal" style="color: ${color};">${sign}${formatYen(Math.abs(bal))}</span>
         </div>`;
     }).join("");
 
     const settlementsEl = document.getElementById("settlements");
     const settlements = computeSettlements(balances);
     if (settlements.length === 0) {
-      settlementsEl.innerHTML = `<div class="settled">✨ ぴったり均等、精算不要</div>`;
+      settlementsEl.innerHTML = `<div class="settled-msg">ぴったり均等、精算不要</div>`;
       return;
     }
     settlementsEl.innerHTML = settlements.map(s => {
       const from = byId(s.from);
       const to = byId(s.to);
       return `
-        <div class="settlement">
+        <div class="settle-row">
           <span class="text">${from.emoji}${from.name}<span class="arrow">→</span>${to.emoji}${to.name}</span>
           <span class="amt">${formatYen(s.amount)}</span>
-        </div>
-      `;
+        </div>`;
     }).join("");
   };
 
   const render = () => { renderRoomBar(); renderEntries(); renderSummary(); updateSyncBadge(); };
   render();
+  updateDoneState();
 
-  // Initial sync: pull current room state from server.
-  // If hash references an unknown room, try to join it from the server.
   (async () => {
     const fromHash = readHashRoom();
     if (fromHash && !rooms.find(r => r.id === fromHash)) {
