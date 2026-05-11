@@ -554,6 +554,104 @@
     transition: transform 0.1s ease;
   }
   .room-create:active { transform: scale(0.98); }
+
+  /* Name dialog (rename / create) */
+  dialog.name-dialog {
+    border: none;
+    padding: 0;
+    background: transparent;
+    color: var(--text);
+    max-width: 380px;
+    width: calc(100% - 40px);
+  }
+
+  dialog.name-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .nd-form {
+    background: #14192a;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px 20px 20px;
+    animation: popIn 0.18s ease;
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .nd-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  .nd-form input {
+    width: 100%;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+    color: var(--text);
+    font-size: 16px;
+    font-family: inherit;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+
+  .nd-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(124, 92, 255, 0.08);
+    box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.15);
+  }
+
+  .nd-counter {
+    text-align: right;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nd-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .nd-cancel, .nd-ok {
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    font-family: inherit;
+    transition: transform 0.1s ease;
+  }
+
+  .nd-cancel {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--line);
+  }
+
+  .nd-ok {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white;
+    border: none;
+  }
+
+  .nd-ok:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .nd-cancel:active { background: rgba(255, 255, 255, 0.05); }
+  .nd-ok:active:not(:disabled) { transform: scale(0.98); }
 </style>
 </head>
 <body>
@@ -573,6 +671,18 @@
         <div class="room-list" id="room-list"></div>
         <button class="room-create" id="room-create" type="button">＋ 新しい部屋</button>
       </div>
+    </dialog>
+
+    <dialog class="name-dialog" id="name-dialog" aria-labelledby="nd-title">
+      <form class="nd-form" id="nd-form">
+        <div class="nd-title" id="nd-title">部屋の名前</div>
+        <input type="text" id="nd-input" maxlength="30" autocomplete="off" placeholder="例: 旅行2026春" />
+        <div class="nd-counter"><span id="nd-count">0</span> / 30</div>
+        <div class="nd-actions">
+          <button type="button" class="nd-cancel" id="nd-cancel">キャンセル</button>
+          <button type="submit" class="nd-ok" id="nd-ok" disabled>決定</button>
+        </div>
+      </form>
     </dialog>
 
     <form class="section" id="entry-form" autocomplete="off">
@@ -772,6 +882,57 @@
   const roomBarBtn = document.getElementById("room-bar");
   const roomListEl = document.getElementById("room-list");
 
+  const nameDialog = document.getElementById("name-dialog");
+  const nameForm = document.getElementById("nd-form");
+  const nameInput = document.getElementById("nd-input");
+  const nameOk = document.getElementById("nd-ok");
+  const nameCancel = document.getElementById("nd-cancel");
+  const nameTitleEl = document.getElementById("nd-title");
+  const nameCount = document.getElementById("nd-count");
+
+  const askName = ({ title, defaultValue = "", okLabel = "決定", placeholder = "" }) =>
+    new Promise((resolve) => {
+      let resolved = false;
+      const finish = (val) => {
+        if (resolved) return;
+        resolved = true;
+        nameForm.onsubmit = null;
+        nameCancel.onclick = null;
+        nameDialog.oncancel = null;
+        nameDialog.onclick = null;
+        nameInput.oninput = null;
+        nameDialog.close();
+        resolve(val);
+      };
+      nameTitleEl.textContent = title;
+      nameOk.textContent = okLabel;
+      nameInput.placeholder = placeholder || "";
+      nameInput.value = defaultValue;
+      nameCount.textContent = String(defaultValue.length);
+      nameOk.disabled = defaultValue.trim().length === 0;
+
+      nameInput.oninput = () => {
+        const len = nameInput.value.length;
+        nameCount.textContent = String(len);
+        nameOk.disabled = nameInput.value.trim().length === 0;
+      };
+      nameForm.onsubmit = (e) => {
+        e.preventDefault();
+        const v = nameInput.value.trim();
+        if (!v) return;
+        finish(v.slice(0, 30));
+      };
+      nameCancel.onclick = () => finish(null);
+      nameDialog.oncancel = (e) => { e.preventDefault(); finish(null); };
+      nameDialog.onclick = (e) => { if (e.target === nameDialog) finish(null); };
+
+      nameDialog.showModal();
+      requestAnimationFrame(() => {
+        nameInput.focus();
+        nameInput.select();
+      });
+    });
+
   const renderRoomBar = () => {
     const cur = rooms.find(r => r.id === currentRoomId);
     document.getElementById("room-bar-name").textContent = cur?.name || "部屋";
@@ -798,15 +959,17 @@
   sheet.addEventListener("click", (e) => {
     if (e.target === sheet) sheet.close();
   });
-  document.getElementById("room-create").addEventListener("click", () => {
-    const name = prompt("部屋の名前");
+  document.getElementById("room-create").addEventListener("click", async () => {
+    const name = await askName({
+      title: "新しい部屋",
+      okLabel: "作成",
+      placeholder: "例: 旅行2026春",
+    });
     if (!name) return;
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    createRoom(trimmed.slice(0, 30));
+    createRoom(name);
     sheet.close();
   });
-  roomListEl.addEventListener("click", (e) => {
+  roomListEl.addEventListener("click", async (e) => {
     const pick = e.target.closest(".room-pick");
     const edit = e.target.closest(".room-edit");
     const del = e.target.closest(".room-del");
@@ -815,11 +978,13 @@
       sheet.close();
     } else if (edit) {
       const cur = rooms.find(r => r.id === edit.dataset.id);
-      const next = prompt("新しい名前", cur?.name || "");
+      const next = await askName({
+        title: "部屋の名前を変更",
+        defaultValue: cur?.name || "",
+        okLabel: "保存",
+      });
       if (!next) return;
-      const trimmed = next.trim();
-      if (!trimmed) return;
-      renameRoom(edit.dataset.id, trimmed.slice(0, 30));
+      renameRoom(edit.dataset.id, next);
     } else if (del) {
       const cur = rooms.find(r => r.id === del.dataset.id);
       if (!confirm(`「${cur?.name || ""}」と全ての履歴を削除します。よろしいですか？`)) return;
