@@ -1,6 +1,6 @@
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, If-Match",
 };
 
@@ -78,11 +78,19 @@ export const onRequestPut = async ({ params, env, request }) => {
   }
 
   const nextVersion = newVersion();
+  const updatedAt = Date.now();
   await env.ROOMS_KV.put(KEY(id), JSON.stringify(sanitized), {
-    metadata: { version: nextVersion, updatedAt: Date.now() },
+    metadata: { version: nextVersion, updatedAt, name: sanitized.name },
   });
 
   return json({ ...sanitized, version: nextVersion }, {
     headers: { ETag: `"${nextVersion}"` },
   });
+};
+
+export const onRequestDelete = async ({ params, env }) => {
+  const id = params.id;
+  if (!isValidId(id)) return json({ error: "invalid_id" }, { status: 400 });
+  await env.ROOMS_KV.delete(KEY(id));
+  return json({ ok: true });
 };

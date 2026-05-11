@@ -1089,21 +1089,26 @@
 
   const byId = (id) => PEOPLE.find(p => p.id === id);
 
-  const STORAGE = {
-    rooms: "warikan-kun:v2:rooms",
-    current: "warikan-kun:v2:current",
-    entries: (id) => `warikan-kun:v2:entries:${id}`,
-    version: (id) => `warikan-kun:v2:version:${id}`,
-    v1: "warikan-kun:v1",
-  };
+  // Clean up any legacy localStorage keys (everything except install dismissal)
+  (() => {
+    const keep = new Set(["warikan-kun:install-dismissed"]);
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("warikan-kun:") && !keep.has(k)) localStorage.removeItem(k);
+    }
+  })();
 
   const API_BASE = "/api/rooms";
 
   const formatYen = (n) => `¥${Math.round(n).toLocaleString("ja-JP")}`;
   const newId = () => crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 
-  const loadVersion = (id) => localStorage.getItem(STORAGE.version(id)) || null;
-  const saveVersion = (id, v) => localStorage.setItem(STORAGE.version(id), v);
+  const apiListRooms = async () => {
+    const res = await fetch(API_BASE, { method: "GET" });
+    if (!res.ok) throw new Error(`LIST ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data.rooms) ? data.rooms : [];
+  };
 
   const apiGet = async (id) => {
     const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { method: "GET" });
@@ -1125,6 +1130,11 @@
     return { status: 200, data: await res.json() };
   };
 
+  const apiDelete = async (id) => {
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!res.ok) throw new Error(`DELETE ${res.status}`);
+  };
+
   let syncStatus = "idle";
   const updateSyncBadge = () => {
     const el = document.getElementById("sync-badge");
@@ -1135,193 +1145,180 @@
   };
   const setSyncStatus = (s) => { syncStatus = s; updateSyncBadge(); };
 
-  const safeParse = (raw, fallback) => {
-    try { const v = JSON.parse(raw); return v ?? fallback; } catch { return fallback; }
-  };
-
-  const loadRooms = () => {
-    const raw = localStorage.getItem(STORAGE.rooms);
-    return raw ? (Array.isArray(safeParse(raw, [])) ? safeParse(raw, []) : []) : [];
-  };
-  const saveRooms = (rs) => localStorage.setItem(STORAGE.rooms, JSON.stringify(rs));
-  const loadEntries = (roomId) => {
-    if (!roomId) return [];
-    const raw = localStorage.getItem(STORAGE.entries(roomId));
-    const parsed = raw ? safeParse(raw, []) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  };
-  const saveEntriesFor = (roomId, e) => localStorage.setItem(STORAGE.entries(roomId), JSON.stringify(e));
-
-  const migrate = () => {
-    let rs = loadRooms();
-    if (rs.length > 0) return rs;
-    const v1raw = localStorage.getItem(STORAGE.v1);
-    const v1Entries = v1raw ? safeParse(v1raw, null) : null;
-    const id = newId();
-    const room = { id, name: "デフォルト", createdAt: Date.now() };
-    saveRooms([room]);
-    if (Array.isArray(v1Entries) && v1Entries.length > 0) {
-      saveEntriesFor(id, v1Entries);
-    }
-    localStorage.setItem(STORAGE.current, id);
-    return [room];
-  };
-
-  let rooms = migrate();
+  // In-memory state (sourced from the server, never persisted locally)
+  let rooms = [];          // [{id, name, updatedAt}]
+  let currentRoomId = null;
+  let entries = [];
+  let currentVersion = null;
 
   const readHashRoom = () => {
     const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
     return hash.get("r");
   };
   const writeHashRoom = (id) => {
+    if (!id) {
+      history.replaceState(null, "", location.pathname + location.search);
+      return;
+    }
     const hash = new URLSearchParams();
     hash.set("r", id);
     history.replaceState(null, "", "#" + hash.toString());
   };
 
-  let currentRoomId = (() => {
-    const fromHash = readHashRoom();
-    if (fromHash && rooms.find(r => r.id === fromHash)) return fromHash;
-    const stored = localStorage.getItem(STORAGE.current);
-    if (stored && rooms.find(r => r.id === stored)) return stored;
-    return rooms[0]?.id || null;
-  })();
-
-  let entries = loadEntries(currentRoomId);
-  if (currentRoomId) writeHashRoom(currentRoomId);
-  const persistEntries = () => saveEntriesFor(currentRoomId, entries);
-
-  let pushTimer = null;
-  const schedulePush = (roomId) => {
-    clearTimeout(pushTimer);
-    setSyncStatus("syncing");
-    pushTimer = setTimeout(() => pushRoom(roomId), 350);
-  };
-
-  const applyServerState = (roomId, data) => {
-    if (!data) return;
-    if (typeof data.name === "string" && data.name) {
-      const room = rooms.find(r => r.id === roomId);
-      if (room && room.name !== data.name) {
-        rooms = rooms.map(r => r.id === roomId ? { ...r, name: data.name } : r);
-        saveRooms(rooms);
-      }
-    }
-    const serverEntries = Array.isArray(data.entries) ? data.entries : [];
-    saveEntriesFor(roomId, serverEntries);
-    if (data.version) saveVersion(roomId, data.version);
-    if (roomId === currentRoomId) {
-      entries = serverEntries;
-      render();
-    } else {
-      renderRoomBar();
-      renderRoomList();
-    }
-  };
-
-  const pullRoom = async (roomId) => {
-    if (!roomId) return;
+  const refreshRoomList = async () => {
     try {
-      setSyncStatus("syncing");
-      const res = await apiGet(roomId);
-      if (res.status === 200) {
-        applyServerState(roomId, res.data);
-        setSyncStatus("idle");
-      } else if (res.status === 404) {
-        await pushRoom(roomId, true);
-      }
-    } catch {
-      setSyncStatus("offline");
-    }
-  };
-
-  const pushRoom = async (roomId, ignoreVersion = false) => {
-    if (!roomId) return;
-    const room = rooms.find(r => r.id === roomId);
-    if (!room) return;
-    const body = { name: room.name, entries: loadEntries(roomId) };
-    const v = ignoreVersion ? null : loadVersion(roomId);
-    try {
-      setSyncStatus("syncing");
-      const res = await apiPut(roomId, body, v);
-      if (res.status === 200) {
-        if (res.data.version) saveVersion(roomId, res.data.version);
-        setSyncStatus("idle");
-      } else if (res.status === 409) {
-        applyServerState(roomId, res.conflict);
-        setSyncStatus("idle");
-      }
-    } catch {
-      setSyncStatus("offline");
-    }
-  };
-
-  const setCurrentRoom = (id) => {
-    if (id === currentRoomId) return;
-    currentRoomId = id;
-    entries = loadEntries(id);
-    localStorage.setItem(STORAGE.current, id);
-    writeHashRoom(id);
-    render();
-    pullRoom(id);
-  };
-
-  const createRoom = (name) => {
-    const id = newId();
-    rooms = [...rooms, { id, name, createdAt: Date.now() }];
-    saveRooms(rooms);
-    saveEntriesFor(id, []);
-    currentRoomId = id;
-    entries = [];
-    localStorage.setItem(STORAGE.current, id);
-    writeHashRoom(id);
-    render();
-    pushRoom(id, true);
-  };
-
-  const renameRoom = (id, name) => {
-    rooms = rooms.map(r => r.id === id ? { ...r, name } : r);
-    saveRooms(rooms);
-    renderRoomBar();
-    renderRoomList();
-    schedulePush(id);
-  };
-
-  const deleteRoom = (id) => {
-    if (rooms.length <= 1) { alert("最後の部屋は削除できません"); return; }
-    const wasCurrent = id === currentRoomId;
-    rooms = rooms.filter(r => r.id !== id);
-    saveRooms(rooms);
-    localStorage.removeItem(STORAGE.entries(id));
-    localStorage.removeItem(STORAGE.version(id));
-    if (wasCurrent) {
-      currentRoomId = rooms[0].id;
-      entries = loadEntries(currentRoomId);
-      localStorage.setItem(STORAGE.current, currentRoomId);
-      writeHashRoom(currentRoomId);
-      render();
-      pullRoom(currentRoomId);
-    } else {
-      renderRoomList();
-    }
-  };
-
-  const joinRoomById = async (id) => {
-    if (!id) return false;
-    try {
-      const res = await apiGet(id);
-      if (res.status !== 200) return false;
-      const name = res.data.name || "共有された部屋";
-      rooms = [...rooms, { id, name, createdAt: Date.now() }];
-      saveRooms(rooms);
-      applyServerState(id, res.data);
-      currentRoomId = id;
-      entries = loadEntries(id);
-      localStorage.setItem(STORAGE.current, id);
-      render();
+      rooms = await apiListRooms();
       return true;
     } catch {
       return false;
+    }
+  };
+
+  const fetchCurrentRoom = async () => {
+    if (!currentRoomId) {
+      entries = [];
+      currentVersion = null;
+      return;
+    }
+    try {
+      const res = await apiGet(currentRoomId);
+      if (res.status === 200) {
+        entries = Array.isArray(res.data.entries) ? res.data.entries : [];
+        currentVersion = res.data.version || null;
+      } else if (res.status === 404) {
+        entries = [];
+        currentVersion = null;
+        currentRoomId = rooms[0]?.id || null;
+        writeHashRoom(currentRoomId);
+        if (currentRoomId) await fetchCurrentRoom();
+      }
+    } catch {
+      // offline — keep existing in-memory state
+    }
+  };
+
+  const initState = async () => {
+    setSyncStatus("syncing");
+    const ok = await refreshRoomList();
+    let fromHash = readHashRoom();
+    if (fromHash && !rooms.find(r => r.id === fromHash) && ok) {
+      // Hash points to a room not on server; clear it
+      fromHash = null;
+    }
+    currentRoomId = fromHash || rooms[0]?.id || null;
+    writeHashRoom(currentRoomId);
+    await fetchCurrentRoom();
+    setSyncStatus(ok ? "idle" : "offline");
+    render();
+  };
+
+  const setCurrentRoom = async (id) => {
+    if (id === currentRoomId) return;
+    currentRoomId = id;
+    entries = [];
+    currentVersion = null;
+    writeHashRoom(id);
+    render();
+    setSyncStatus("syncing");
+    await fetchCurrentRoom();
+    setSyncStatus("idle");
+    render();
+  };
+
+  const pushCurrentRoom = async () => {
+    if (!currentRoomId) return;
+    const room = rooms.find(r => r.id === currentRoomId);
+    if (!room) return;
+    setSyncStatus("syncing");
+    let attempts = 3;
+    while (attempts-- > 0) {
+      try {
+        const res = await apiPut(currentRoomId, { name: room.name, entries }, currentVersion);
+        if (res.status === 200) {
+          currentVersion = res.data.version || null;
+          setSyncStatus("idle");
+          return;
+        }
+        if (res.status === 409 && res.conflict) {
+          // Merge: keep entries that exist locally but not on server (concurrent adds)
+          const serverEntries = Array.isArray(res.conflict.entries) ? res.conflict.entries : [];
+          const serverIds = new Set(serverEntries.map(e => e.id));
+          const myExtra = entries.filter(e => !serverIds.has(e.id));
+          entries = [...myExtra, ...serverEntries];
+          currentVersion = res.conflict.version;
+          render();
+          continue;
+        }
+        break;
+      } catch {
+        setSyncStatus("offline");
+        return;
+      }
+    }
+    setSyncStatus("offline");
+  };
+
+  const createRoom = async (name) => {
+    const id = newId();
+    rooms = [{ id, name, updatedAt: Date.now() }, ...rooms];
+    currentRoomId = id;
+    entries = [];
+    currentVersion = null;
+    writeHashRoom(id);
+    render();
+    setSyncStatus("syncing");
+    try {
+      const res = await apiPut(id, { name, entries: [] }, null);
+      if (res.status === 200) currentVersion = res.data.version || null;
+      setSyncStatus("idle");
+    } catch {
+      setSyncStatus("offline");
+    }
+  };
+
+  const renameRoom = async (id, name) => {
+    const idx = rooms.findIndex(r => r.id === id);
+    if (idx < 0) return;
+    rooms = [...rooms.slice(0, idx), { ...rooms[idx], name }, ...rooms.slice(idx + 1)];
+    render();
+    setSyncStatus("syncing");
+    try {
+      let bodyEntries = entries;
+      let v = currentVersion;
+      if (id !== currentRoomId) {
+        const r = await apiGet(id);
+        bodyEntries = r.status === 200 ? (r.data.entries || []) : [];
+        v = r.status === 200 ? r.data.version : null;
+      }
+      const res = await apiPut(id, { name, entries: bodyEntries }, v);
+      if (res.status === 200 && id === currentRoomId) {
+        currentVersion = res.data.version || null;
+      }
+      setSyncStatus("idle");
+    } catch {
+      setSyncStatus("offline");
+    }
+  };
+
+  const deleteRoom = async (id) => {
+    rooms = rooms.filter(r => r.id !== id);
+    if (currentRoomId === id) {
+      currentRoomId = rooms[0]?.id || null;
+      entries = [];
+      currentVersion = null;
+      writeHashRoom(currentRoomId);
+      render();
+      if (currentRoomId) await fetchCurrentRoom();
+      render();
+    } else {
+      render();
+    }
+    setSyncStatus("syncing");
+    try {
+      await apiDelete(id);
+      setSyncStatus("idle");
+    } catch {
+      setSyncStatus("offline");
     }
   };
 
@@ -1405,7 +1402,12 @@
 
   const renderRoomHeader = () => {
     const cur = rooms.find(r => r.id === currentRoomId);
-    document.getElementById("rh-name").textContent = cur?.name || "部屋";
+    const nameEl = document.getElementById("rh-name");
+    if (rooms.length === 0) {
+      nameEl.textContent = "部屋がありません";
+    } else {
+      nameEl.textContent = cur?.name || "部屋を選択";
+    }
     document.getElementById("rh-count").textContent = String(rooms.length);
   };
   const renderRoomBar = renderRoomHeader;
@@ -1465,9 +1467,13 @@
     }
   });
 
-  window.addEventListener("hashchange", () => {
+  window.addEventListener("hashchange", async () => {
     const fromHash = readHashRoom();
-    if (fromHash && fromHash !== currentRoomId && rooms.find(r => r.id === fromHash)) {
+    if (!fromHash || fromHash === currentRoomId) return;
+    if (!rooms.find(r => r.id === fromHash)) {
+      await refreshRoomList();
+    }
+    if (rooms.find(r => r.id === fromHash)) {
       setCurrentRoom(fromHash);
     }
   });
@@ -1558,13 +1564,13 @@
     if (!Number.isFinite(amount) || amount <= 0) return;
     if (beneficiaries.length === 0) return;
 
+    if (!currentRoomId) return;
     entries = [
       { id: crypto.randomUUID(), person, amount, note, beneficiaries, createdAt: Date.now() },
       ...entries,
     ];
-    persistEntries();
     render();
-    schedulePush(currentRoomId);
+    pushCurrentRoom();
 
     entrySheet.close();
     resetEntryForm();
@@ -1574,9 +1580,8 @@
     if (entries.length === 0) return;
     if (!confirm("全ての履歴を削除します。よろしいですか？")) return;
     entries = [];
-    persistEntries();
     render();
-    schedulePush(currentRoomId);
+    pushCurrentRoom();
   });
 
   document.getElementById("entries-list").addEventListener("click", (e) => {
@@ -1584,9 +1589,8 @@
     if (!btn) return;
     const id = btn.dataset.id;
     entries = entries.filter(x => x.id !== id);
-    persistEntries();
     render();
-    schedulePush(currentRoomId);
+    pushCurrentRoom();
   });
 
   const beneOf = (entry) => {
@@ -1725,19 +1729,14 @@
   render();
   updateDoneState();
 
-  (async () => {
-    const fromHash = readHashRoom();
-    if (fromHash && !rooms.find(r => r.id === fromHash)) {
-      const joined = await joinRoomById(fromHash);
-      if (joined) return;
-    }
-    if (currentRoomId) pullRoom(currentRoomId);
-  })();
+  initState();
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && currentRoomId) {
-      pullRoom(currentRoomId);
-    }
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible") return;
+    const ok = await refreshRoomList();
+    await fetchCurrentRoom();
+    setSyncStatus(ok ? "idle" : "offline");
+    render();
   });
 
   document.getElementById("share-btn")?.addEventListener("click", shareCurrentRoom);
