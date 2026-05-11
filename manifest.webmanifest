@@ -2,16 +2,19 @@
   "name": "割り勘くん",
   "short_name": "割り勘くん",
   "description": "割り勘のためのアプリ",
-  "start_url": ".",
-  "scope": ".",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0b0f1a",
-  "theme_color": "#0b0f1a",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "lang": "ja",
+  "categories": ["productivity", "finance", "utilities"],
   "icons": [
-    { "src": "pwa-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "pwa-512x512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "pwa-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
   ]
 }

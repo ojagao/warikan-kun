@@ -1,13 +1,13 @@
-const VERSION = "v9";
+const VERSION = "v10";
 const CACHE = `warikan-kun-${VERSION}`;
 const PRECACHE = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest",
-  "./favicon.svg",
-  "./apple-touch-icon.png",
-  "./pwa-192x192.png",
-  "./pwa-512x512.png",
+  "/",
+  "/index.html",
+  "/manifest.webmanifest",
+  "/favicon.svg",
+  "/apple-touch-icon.png",
+  "/pwa-192x192.png",
+  "/pwa-512x512.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -37,10 +37,10 @@ self.addEventListener("fetch", (event) => {
       fetch(req)
         .then((res) => {
           const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put("./index.html", copy));
+          caches.open(CACHE).then((cache) => cache.put("/index.html", copy));
           return res;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(() => caches.match("/index.html"))
     );
     return;
   }
