@@ -76,30 +76,88 @@
     padding-bottom: calc(120px + env(safe-area-inset-bottom));
   }
 
-  /* Navigation bar */
-  .nav-bar {
-    padding: 16px 20px 4px;
+  /* Rooms strip */
+  .rooms-strip {
     display: flex;
-    justify-content: center;
+    gap: 8px;
+    padding: 16px 16px 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding: 16px;
+    scroll-snap-type: x proximity;
+    mask-image: linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%);
   }
+  .rooms-strip::-webkit-scrollbar { display: none; }
 
-  .room-switcher {
+  .room-tab {
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 14px;
+    padding: 10px 16px;
     border-radius: 999px;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
     background: var(--fill);
-    transition: background 0.15s, transform 0.1s;
-    max-width: 100%;
+    color: var(--text-2);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: 200px;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    transition: background 0.18s, color 0.18s, transform 0.08s, padding 0.2s;
+    scroll-snap-align: start;
   }
-  .room-switcher .home { font-size: 14px; }
-  .room-switcher .rn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .room-switcher .caret { font-size: 9px; color: var(--text-3); margin-top: 2px; }
-  .room-switcher:active { background: var(--fill-2); transform: scale(0.97); }
+  .room-tab:active { transform: scale(0.95); }
+  .room-tab .emoji { font-size: 13px; opacity: 0.6; transition: opacity 0.18s; }
+  .room-tab .rn {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .room-tab[data-active="true"] {
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    padding: 10px 18px;
+  }
+  .room-tab[data-active="true"] .emoji { opacity: 1; }
+
+  .room-add, .room-manage {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--fill);
+    color: var(--accent);
+    position: relative;
+    transition: background 0.18s, transform 0.08s;
+  }
+  .room-add:active, .room-manage:active { background: var(--fill-2); transform: scale(0.92); }
+
+  .room-add::before, .room-add::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    background: currentColor;
+    border-radius: 1.5px;
+  }
+  .room-add::before { width: 14px; height: 2px; transform: translate(-50%, -50%); }
+  .room-add::after { width: 2px; height: 14px; transform: translate(-50%, -50%); }
+
+  .room-manage {
+    color: var(--text-2);
+    font-size: 18px;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+    letter-spacing: 1px;
+    padding-bottom: 4px;
+  }
 
   /* Grouped section */
   .group {
@@ -300,9 +358,8 @@
   /* FAB */
   .fab {
     position: fixed;
+    right: 20px;
     bottom: calc(24px + env(safe-area-inset-bottom));
-    left: 50%;
-    transform: translateX(-50%);
     width: 56px;
     height: 56px;
     border-radius: 28px;
@@ -321,24 +378,11 @@
     background: currentColor;
     border-radius: 2px;
   }
-  .fab::before {
-    width: 22px;
-    height: 3px;
-    transform: translate(-50%, -50%);
-  }
-  .fab::after {
-    width: 3px;
-    height: 22px;
-    transform: translate(-50%, -50%);
-  }
+  .fab::before { width: 22px; height: 3px; transform: translate(-50%, -50%); }
+  .fab::after { width: 3px; height: 22px; transform: translate(-50%, -50%); }
   .fab:active {
-    transform: translateX(-50%) scale(0.92);
+    transform: scale(0.92);
     box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3), 0 1px 3px rgba(0, 0, 0, 0.3);
-  }
-
-  @media (min-width: 520px) {
-    .fab { left: auto; right: max(20px, calc(50vw - 240px)); transform: none; }
-    .fab:active { transform: scale(0.92); }
   }
 
   /* Sheets (room / entry) */
@@ -674,13 +718,7 @@
 </head>
 <body>
   <div class="app">
-    <header class="nav-bar">
-      <button class="room-switcher" id="room-bar" type="button" aria-haspopup="dialog">
-        <span class="home">🏠</span>
-        <span class="rn" id="room-bar-name">部屋</span>
-        <span class="caret">▼</span>
-      </button>
-    </header>
+    <nav class="rooms-strip" id="rooms-strip" aria-label="部屋の切り替え"></nav>
 
     <section class="group" id="summary-group" style="display:none;">
       <div class="group-header">集計</div>
@@ -1064,7 +1102,7 @@
   }[c]));
 
   const roomSheet = document.getElementById("room-sheet");
-  const roomBarBtn = document.getElementById("room-bar");
+  const roomsStripEl = document.getElementById("rooms-strip");
   const roomListEl = document.getElementById("room-list");
 
   const entrySheet = document.getElementById("entry-sheet");
@@ -1120,10 +1158,25 @@
       });
     });
 
-  const renderRoomBar = () => {
-    const cur = rooms.find(r => r.id === currentRoomId);
-    document.getElementById("room-bar-name").textContent = cur?.name || "部屋";
+  const renderRoomStrip = () => {
+    const tabs = rooms.map(r => `
+      <button class="room-tab" type="button" data-id="${r.id}" data-active="${r.id === currentRoomId}">
+        <span class="emoji">🏠</span>
+        <span class="rn">${escapeHtml(r.name)}</span>
+      </button>
+    `).join("");
+    roomsStripEl.innerHTML = tabs + `
+      <button class="room-add" id="room-add" type="button" aria-label="新しい部屋"></button>
+      <button class="room-manage" id="room-manage" type="button" aria-label="部屋を管理">⋯</button>
+    `;
+    const active = roomsStripEl.querySelector('.room-tab[data-active="true"]');
+    if (active) {
+      requestAnimationFrame(() => {
+        active.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      });
+    }
   };
+  const renderRoomBar = renderRoomStrip;
 
   const renderRoomList = () => {
     roomListEl.innerHTML = rooms.map(r => `
@@ -1138,10 +1191,25 @@
     `).join("");
   };
 
-  roomBarBtn.addEventListener("click", () => {
-    renderRoomList();
-    roomSheet.showModal();
+  roomsStripEl.addEventListener("click", async (e) => {
+    const tab = e.target.closest(".room-tab");
+    const add = e.target.closest("#room-add");
+    const manage = e.target.closest("#room-manage");
+    if (tab) {
+      setCurrentRoom(tab.dataset.id);
+    } else if (add) {
+      const name = await askName({
+        title: "新しい部屋",
+        okLabel: "作成",
+        placeholder: "例: 旅行2026春",
+      });
+      if (name) createRoom(name);
+    } else if (manage) {
+      renderRoomList();
+      roomSheet.showModal();
+    }
   });
+
   document.getElementById("room-sheet-close").addEventListener("click", () => roomSheet.close());
   roomSheet.addEventListener("click", (e) => {
     if (e.target === roomSheet) roomSheet.close();
