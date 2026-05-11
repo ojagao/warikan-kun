@@ -76,85 +76,62 @@
     padding-bottom: calc(120px + env(safe-area-inset-bottom));
   }
 
-  /* Rooms strip */
-  .rooms-strip {
+  /* Room header (tap to open sheet) */
+  .room-header {
     display: flex;
-    gap: 8px;
-    padding: 16px 16px 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    scroll-padding: 16px;
-    scroll-snap-type: x proximity;
-    mask-image: linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%);
-  }
-  .rooms-strip::-webkit-scrollbar { display: none; }
-
-  .room-tab {
-    flex-shrink: 0;
-    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 16px;
-    border-radius: 999px;
-    background: var(--fill);
-    color: var(--text-2);
-    font-size: 14px;
-    font-weight: 500;
-    white-space: nowrap;
-    max-width: 200px;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-    transition: background 0.18s, color 0.18s, transform 0.08s, padding 0.2s;
-    scroll-snap-align: start;
+    gap: 12px;
+    width: calc(100% - 32px);
+    margin: 16px 16px 8px;
+    padding: 14px 16px;
+    background: var(--bg-elev-1);
+    border-radius: 14px;
+    color: var(--text);
+    text-align: left;
+    transition: background 0.15s, transform 0.08s;
   }
-  .room-tab:active { transform: scale(0.95); }
-  .room-tab .rn {
+  .room-header:active { background: var(--bg-elev-2); transform: scale(0.99); }
+
+  .rh-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .rh-label {
+    font-size: 11px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+  .rh-name {
+    font-size: 17px;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .room-tab[data-active="true"] {
-    background: var(--accent);
-    color: white;
-    font-weight: 600;
-    padding: 10px 18px;
-  }
 
-  .room-add, .room-manage {
+  .rh-meta {
     flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--fill);
-    color: var(--accent);
-    position: relative;
-    transition: background 0.18s, transform 0.08s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-3);
+    font-size: 14px;
   }
-  .room-add:active, .room-manage:active { background: var(--fill-2); transform: scale(0.92); }
-
-  .room-add::before, .room-add::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    background: currentColor;
-    border-radius: 1.5px;
-  }
-  .room-add::before { width: 14px; height: 2px; transform: translate(-50%, -50%); }
-  .room-add::after { width: 2px; height: 14px; transform: translate(-50%, -50%); }
-
-  .room-manage {
+  .rh-count {
+    font-variant-numeric: tabular-nums;
     color: var(--text-2);
+    font-weight: 500;
+    font-size: 13px;
+    background: var(--fill);
+    padding: 3px 10px;
+    border-radius: 999px;
+    min-width: 24px;
+    text-align: center;
+  }
+  .rh-chevron {
+    color: var(--text-3);
     font-size: 18px;
-    display: grid;
-    place-items: center;
     line-height: 1;
-    letter-spacing: 1px;
-    padding-bottom: 4px;
+    font-weight: 400;
   }
 
   /* Install banner */
@@ -869,7 +846,16 @@
 </head>
 <body>
   <div class="app">
-    <nav class="rooms-strip" id="rooms-strip" aria-label="部屋の切り替え"></nav>
+    <button class="room-header" id="room-header" type="button" aria-haspopup="dialog" aria-label="部屋を切り替え">
+      <div class="rh-info">
+        <span class="rh-label">部屋</span>
+        <span class="rh-name" id="rh-name">部屋</span>
+      </div>
+      <div class="rh-meta">
+        <span class="rh-count" id="rh-count">1</span>
+        <span class="rh-chevron">›</span>
+      </div>
+    </button>
 
     <div class="install-banner" id="install-banner" hidden>
       <div class="ib-icon">
@@ -1316,7 +1302,7 @@
   }[c]));
 
   const roomSheet = document.getElementById("room-sheet");
-  const roomsStripEl = document.getElementById("rooms-strip");
+  const roomHeaderBtn = document.getElementById("room-header");
   const roomListEl = document.getElementById("room-list");
 
   const entrySheet = document.getElementById("entry-sheet");
@@ -1372,24 +1358,12 @@
       });
     });
 
-  const renderRoomStrip = () => {
-    const tabs = rooms.map(r => `
-      <button class="room-tab" type="button" data-id="${r.id}" data-active="${r.id === currentRoomId}">
-        <span class="rn">${escapeHtml(r.name)}</span>
-      </button>
-    `).join("");
-    roomsStripEl.innerHTML = tabs + `
-      <button class="room-add" id="room-add" type="button" aria-label="新しい部屋"></button>
-      <button class="room-manage" id="room-manage" type="button" aria-label="部屋を管理">⋯</button>
-    `;
-    const active = roomsStripEl.querySelector('.room-tab[data-active="true"]');
-    if (active) {
-      requestAnimationFrame(() => {
-        active.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-      });
-    }
+  const renderRoomHeader = () => {
+    const cur = rooms.find(r => r.id === currentRoomId);
+    document.getElementById("rh-name").textContent = cur?.name || "部屋";
+    document.getElementById("rh-count").textContent = String(rooms.length);
   };
-  const renderRoomBar = renderRoomStrip;
+  const renderRoomBar = renderRoomHeader;
 
   const renderRoomList = () => {
     roomListEl.innerHTML = rooms.map(r => `
@@ -1404,23 +1378,9 @@
     `).join("");
   };
 
-  roomsStripEl.addEventListener("click", async (e) => {
-    const tab = e.target.closest(".room-tab");
-    const add = e.target.closest("#room-add");
-    const manage = e.target.closest("#room-manage");
-    if (tab) {
-      setCurrentRoom(tab.dataset.id);
-    } else if (add) {
-      const name = await askName({
-        title: "新しい部屋",
-        okLabel: "作成",
-        placeholder: "例: 旅行2026春",
-      });
-      if (name) createRoom(name);
-    } else if (manage) {
-      renderRoomList();
-      roomSheet.showModal();
-    }
+  roomHeaderBtn.addEventListener("click", () => {
+    renderRoomList();
+    roomSheet.showModal();
   });
 
   document.getElementById("room-sheet-close").addEventListener("click", () => roomSheet.close());
