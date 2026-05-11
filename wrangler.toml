@@ -1,0 +1,7 @@
+name = "warikan-kun"
+compatibility_date = "2026-05-11"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "ROOMS_KV"
+id = "65d56cf3089241bb92e5f2d46434aaeb"
