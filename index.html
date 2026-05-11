@@ -576,14 +576,9 @@
     background: var(--bg-elev-1);
     border-radius: 14px 14px 0 0;
     padding: 8px 0 calc(16px + env(safe-area-inset-bottom));
-    animation: slideUp 0.28s ease-out;
     max-height: 92vh;
     overflow-y: auto;
     will-change: transform;
-  }
-  @keyframes slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
   }
   .handle {
     width: 60px;
@@ -1441,9 +1436,22 @@
     `).join("");
   };
 
+  const playSheetOpen = (dialog) => {
+    const inner = dialog.querySelector(".sheet-inner");
+    if (!inner) return;
+    for (const a of inner.getAnimations()) a.cancel();
+    inner.style.transform = "";
+    dialog.style.setProperty("--sheet-progress", 0);
+    inner.animate(
+      [{ transform: "translateY(100%)" }, { transform: "translateY(0)" }],
+      { duration: 320, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+    );
+  };
+
   roomHeaderBtn.addEventListener("click", () => {
     renderRoomList();
     roomSheet.showModal();
+    playSheetOpen(roomSheet);
   });
 
   document.getElementById("room-sheet-close").addEventListener("click", () => roomSheet.close());
@@ -1553,7 +1561,7 @@
 
   fab.addEventListener("click", () => {
     entrySheet.showModal();
-    requestAnimationFrame(() => picker.querySelector('input[name="person"]')?.focus({ preventScroll: true }));
+    playSheetOpen(entrySheet);
   });
 
   document.getElementById("es-cancel").addEventListener("click", () => {
@@ -1960,7 +1968,8 @@
       startY = e.clientY;
       sheetHeight = inner.offsetHeight;
       dragging = false;
-      inner.style.animation = "none"; // suppress slideUp keyframe during drag
+      // Cancel any active open/close Web Animations so we can take over transform
+      for (const a of inner.getAnimations()) a.cancel();
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
@@ -1978,10 +1987,7 @@
       if (pointerId !== e.pointerId) return;
       cleanup();
       pointerId = null;
-      if (!dragging) {
-        inner.style.animation = "";
-        return;
-      }
+      if (!dragging) return;
       dragging = false;
       const threshold = Math.min(120, sheetHeight * 0.3);
       if (currentDy >= threshold) {
@@ -1996,12 +2002,12 @@
     // Reset inline transform after dialog closes (e.g., ESC or programmatic)
     dialog.addEventListener("close", () => {
       inner.style.transform = "";
-      inner.style.animation = "";
       dialog.style.setProperty("--sheet-progress", 0);
       currentDy = 0;
       dragging = false;
       pointerId = null;
       cleanup();
+      for (const a of inner.getAnimations()) a.cancel();
     });
   };
 
